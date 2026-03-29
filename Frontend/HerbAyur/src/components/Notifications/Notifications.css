@@ -1,0 +1,137 @@
+.notif-wrapper {
+  position: relative;
+}
+
+.notif-bell {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #2e7d32;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.notif-bell:hover { background: #f0fdf4; }
+
+.notif-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #dc2626;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 320px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  z-index: 2000;
+  overflow: hidden;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid #f0fdf4;
+  font-weight: 700;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+.notif-header button {
+  background: none;
+  border: none;
+  color: #15803d;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.notif-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.notif-item {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid #f9fafb;
+  transition: background 0.15s;
+}
+
+.notif-item:hover { background: #f0fdf4; }
+
+.notif-item.unread { border-left: 3px solid #22c55e; background: #f0fdf4; }
+.notif-item.read   { border-left: 3px solid transparent; }
+
+.notif-item p {
+  font-size: 0.875rem;
+  color: #1e293b;
+  margin-bottom: 0.3rem;
+  line-height: 1.4;
+}
+
+.notif-item span {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.notif-clickable { cursor: pointer; }
+.notif-clickable:hover { background: #dcfce7 !important; }
+
+/* Notification message highlights */
+.notif-hl-receipt {
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+
+.notif-hl-rating {
+  font-weight: 700;
+  color: #d97706;
+}
+
+.notif-hl-amount {
+  font-weight: 700;
+  color: #15803d;
+}
+
+.notif-hl-name {
+  font-weight: 600;
+  color: #1a3c34;
+}
+
+.notif-hl-status {
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  background: #dcfce7;
+  color: #166534;
+}

@@ -1,0 +1,120 @@
+/* =========================
+   PAGE BASE
+========================= */
+.about-page{
+min-height:100vh;
+background:linear-gradient(135deg,#f1f8e9,#e8f5e9);
+padding-bottom:60px;
+}
+
+/* =========================
+   HERO SECTION
+========================= */
+.about-hero{
+text-align:center;
+padding:60px 20px 30px;
+}
+
+.about-logo{
+height:200px;
+margin-bottom:10px;
+
+}
+
+.about-hero h1{
+font-size:2.5rem;
+background:linear-gradient(90deg,#1b5e20,#4caf50);
+-webkit-background-clip:text;
+color:transparent;
+}
+
+.about-hero p{
+color:#6b8e7a;
+margin-top:10px;
+}
+
+/* =========================
+   MAIN CONTAINER
+========================= */
+.about-container{
+max-width:1100px;
+margin:auto;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:40px;
+padding:20px;
+}
+
+/* =========================
+   TEXT SECTION
+========================= */
+.about-text{
+background:white;
+padding:30px;
+border-radius:18px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.about-text h2{
+color:#2e7d32;
+margin-bottom:10px;
+}
+
+.about-text p{
+color:#6b8e7a;
+margin-bottom:20px;
+line-height:1.6;
+}
+
+/* =========================
+   FEATURES GRID
+========================= */
+.about-features{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+/* CARD */
+.about-card{
+background:white;
+padding:20px;
+border-radius:16px;
+box-shadow:0 8px 20px rgba(0,0,0,0.06);
+text-align:center;
+transition:0.3s;
+}
+
+.about-card svg{
+color:#4caf50;
+margin-bottom:10px;
+}
+
+.about-card h3{
+color:#1a3c34;
+margin-bottom:8px;
+}
+
+.about-card p{
+font-size:0.9rem;
+color:#6b8e7a;
+}
+
+/* HOVER EFFECT */
+.about-card:hover{
+transform:translateY(-6px) scale(1.03);
+box-shadow:0 12px 25px rgba(76,175,80,0.2);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media(max-width:768px){
+.about-container{
+grid-template-columns:1fr;
+}
+
+.about-features{
+grid-template-columns:1fr;
+}
+}

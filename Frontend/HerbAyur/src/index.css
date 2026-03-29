@@ -1,0 +1,15 @@
+/* ── Global Table Styles ── */
+table {
+  border-radius: 18px;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table th {
+  background: #66bb6a !important;
+  color: white !important;
+}
+
+table th:first-child { border-radius: 18px 0 0 0; }
+table th:last-child  { border-radius: 0 18px 0 0; }

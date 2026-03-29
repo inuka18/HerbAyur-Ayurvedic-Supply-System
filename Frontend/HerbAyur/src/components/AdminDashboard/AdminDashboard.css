@@ -1,0 +1,324 @@
+.admin-dashboard {
+  padding: 2rem;
+  min-height: 100vh;
+  background: #f0fdf4;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-header h2 {
+  font-size: 1.6rem;
+  color: #1b5e20;
+  margin: 0;
+}
+
+.admin-count {
+  background: #bbf7d0;
+  color: #166534;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.admin-state {
+  text-align: center;
+  padding: 3rem;
+  color: #555;
+  font-size: 1.1rem;
+}
+
+.admin-state.error { color: #dc2626; }
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.admin-table th {
+  background: #166534;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  vertical-align: top;
+}
+
+.admin-table tr:hover td { background: #f0fdf4; }
+
+.material-list {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: disc;
+}
+
+.material-list li { white-space: nowrap; }
+
+.status-select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.status-pending    { background: #fef9c3; color: #854d0e; }
+.status-processing { background: #dbeafe; color: #1e40af; }
+.status-completed  { background: #dcfce7; color: #166534; }
+.status-rejected   { background: #fee2e2; color: #991b1b; }
+
+.btn-delete {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-delete:hover { background: #fca5a5; }
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-tabs button {
+  padding: 0.5rem 1.2rem;
+  border: 1.5px solid #d1fae5;
+  border-radius: 20px;
+  background: white;
+  color: #166534;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-tabs button.active {
+  background: #166534;
+  color: white;
+  border-color: #166534;
+}
+
+.tab-count {
+  background: #dcfce7;
+  color: #166534;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-tabs button.active .tab-count {
+  background: rgba(255,255,255,0.25);
+  color: white;
+}
+
+.tab-badge {
+  background: #dc2626;
+  color: white;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-badge {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pending  { background: #fef9c3; color: #854d0e; }
+.status-approved { background: #dcfce7; color: #166534; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.action-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.btn-approve {
+  background: #dcfce7;
+  color: #166534;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-approve:hover { background: #bbf7d0; }
+
+.btn-reject {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-reject:hover { background: #fca5a5; }
+
+.cert-link {
+  color: #15803d;
+  font-size: 0.82rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.cert-link:hover { text-decoration: underline; }
+
+/* OVERVIEW */
+.adm-overview { padding: 0.5rem 0; }
+
+.adm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+
+.adm-stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: 0.2s;
+}
+
+.adm-stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+
+.adm-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.adm-stat-val   { font-size: 1.4rem; font-weight: 800; color: #1a3c34; line-height: 1; }
+.adm-stat-label { font-size: 0.78rem; color: #6b7280; margin-top: 3px; }
+
+.adm-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+}
+
+.adm-chart-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.4rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.adm-chart-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a3c34;
+  margin-bottom: 1rem;
+}
+
+.adm-chart-wide { grid-column: span 2; }
+
+@media (max-width: 700px) { .adm-chart-wide { grid-column: span 1; } }
+
+/* PENDING PROFILE CHANGES */
+.adm-changes-section {
+  margin-bottom: 1.5rem;
+}
+
+.adm-changes-title {
+  font-size: 1rem;
+  color: #d97706;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adm-change-card {
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.8rem;
+}
+
+.adm-change-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.adm-change-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0.8rem;
+}
+
+.adm-change-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  padding: 4px 0;
+  border-bottom: 1px solid #fef3c7;
+}
+
+.adm-change-row span:first-child {
+  color: #6b7280;
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.adm-change-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pending-edit-tag {
+  background: #fef3c7;
+  color: #d97706;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: 6px;
+}

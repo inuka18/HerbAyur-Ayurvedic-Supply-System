@@ -1,0 +1,28 @@
+.sd-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 2rem 0;
+  background: #f0fdf4;
+  border-bottom: 2px solid #d1fae5;
+}
+
+.sd-tab {
+  padding: 0.55rem 1.4rem;
+  border: 1.5px solid #d1fae5;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: white;
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.sd-tab.active {
+  background: #166534;
+  color: white;
+  border-color: #166534;
+}
+
+.sd-tab:hover:not(.active) { background: #dcfce7; }

@@ -1,0 +1,145 @@
+/* =========================
+   PAGE BASE
+========================= */
+.contact-page{
+min-height:100vh;
+background:linear-gradient(135deg,#f1f8e9,#e8f5e9);
+padding-bottom:60px;
+}
+
+/* HERO */
+.contact-hero{
+text-align:center;
+padding:50px 20px 20px;
+}
+
+.contact-hero h1{
+font-size:2.5rem;
+background:linear-gradient(90deg,#1b5e20,#4caf50);
+-webkit-background-clip:text;
+color:transparent;
+}
+
+.contact-hero p{
+color:#6b8e7a;
+margin-top:10px;
+}
+
+/* =========================
+   MAIN CONTAINER
+========================= */
+.contact-container{
+max-width:1100px;
+margin:auto;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:40px;
+padding:30px 20px;
+}
+
+/* =========================
+   LEFT INFO
+========================= */
+.contact-info{
+background:white;
+padding:30px;
+border-radius:18px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.contact-info h2{
+margin-bottom:10px;
+color:#2e7d32;
+}
+
+.contact-info p{
+color:#6b8e7a;
+margin-bottom:20px;
+}
+
+/* ITEMS */
+.contact-item{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:15px;
+color:#1a3c34;
+font-weight:500;
+}
+
+.contact-item svg{
+color:#4caf50;
+}
+
+/* =========================
+   FORM
+========================= */
+.contact-form{
+background:white;
+padding:30px;
+border-radius:18px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+.contact-form h2{
+margin-bottom:20px;
+color:#2e7d32;
+}
+
+/* INPUT GROUP */
+.contact-group{
+display:flex;
+flex-direction:column;
+margin-bottom:15px;
+}
+
+.contact-group label{
+font-size:0.85rem;
+color:#6b8e7a;
+margin-bottom:5px;
+}
+
+.contact-group input,
+.contact-group textarea{
+padding:10px;
+border-radius:10px;
+border:1px solid rgba(0,0,0,0.1);
+transition:0.3s;
+}
+
+.contact-group input:focus,
+.contact-group textarea:focus{
+border-color:#4caf50;
+box-shadow:0 0 10px rgba(76,175,80,0.2);
+outline:none;
+}
+
+/* BUTTON */
+.contact-btn{
+margin-top:10px;
+background:linear-gradient(90deg,#2e7d32,#66bb6a);
+color:white;
+border:none;
+padding:12px;
+border-radius:30px;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:6px;
+transition:0.3s;
+}
+
+.contact-btn:hover{
+transform:translateY(-2px) scale(1.03);
+box-shadow:0 8px 20px rgba(76,175,80,0.3);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media(max-width:768px){
+.contact-container{
+grid-template-columns:1fr;
+}
+}

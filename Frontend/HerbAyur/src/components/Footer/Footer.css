@@ -1,0 +1,173 @@
+/* MAIN */
+.footer-sketch-real{
+  position: relative;
+  margin-top: 120px;
+  background: linear-gradient(135deg,#1b5e20,#2e7d32);
+  color: #e8f5e9;
+  padding-top: 120px;
+  padding-bottom: 30px;
+  overflow: visible;
+}
+
+/* SHAPE */
+.footer-top-real{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.footer-top-real svg{
+  width: 100%;
+  height: 140px;
+}
+
+/* ICON CONTAINER */
+.real-icons{
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 250px;
+  height: 150px;
+}
+
+/* BASE ICON */
+.ri{
+  position: absolute;
+  transition: transform 0.3s ease;
+}
+
+/* 🌸 FLOWER */
+.flower{
+  font-size: 100px;
+  top: -50px;
+  left: 65%;
+  transform: translateX(-50%);
+  z-index: 5;
+
+  animation: floatMain 4s ease-in-out infinite;
+}
+
+/* 🌿 LEAF */
+.leaf{
+  font-size: 90px;
+  top: -50%;
+  left: 225px;
+  z-index: 2;
+
+  animation: floatMain 4s ease-in-out infinite;
+}
+
+/* 🫚 GINGER */
+.ginger{
+  font-size: 90px;
+  top: -40%;
+  right: 35px;
+  z-index: 2;
+
+  animation: floatMain 4s ease-in-out infinite;
+}
+
+/* 🌾 CORN */
+.corn{
+  font-size: 100px;
+  top: -120px;
+  left: 65%;
+  transform: translateX(-50%);
+  z-index: 1;
+  opacity: 0.9;
+
+  animation: floatMain 4s ease-in-out infinite;
+}
+
+/* ================= ANIMATIONS ================= */
+
+/* main flower (slow gentle float) */
+@keyframes floatMain{
+  0%,100%{ transform: translate(-50%,0px) scale(1); }
+  50%{ transform: translate(-50%,-12px) scale(1.03); }
+}
+
+/* left leaf */
+@keyframes floatLeft{
+  0%,100%{ transform: translateY(0px) rotate(-10deg); }
+  50%{ transform: translateY(-15px) rotate(-14deg); }
+}
+
+/* right ginger */
+@keyframes floatRight{
+  0%,100%{ transform: translateY(0px) rotate(15deg); }
+  50%{ transform: translateY(-12px) rotate(20deg); }
+}
+
+/* back corn */
+@keyframes floatBack{
+  0%,100%{ transform: translate(-50%,0px); }
+  50%{ transform: translate(-50%,-18px); }
+}
+
+/* HOVER EFFECT */
+.ri:hover{
+  transform: scale(1.15) !important;
+}
+
+/* ================= CONTENT ================= */
+
+.footer-content{
+  max-width: 1100px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+  gap: 30px;
+  padding: 20px;
+}
+
+/* TEXT */
+.footer-col h2{
+  margin-bottom: 10px;
+}
+
+.footer-col p{
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+/* LINKS */
+.footer-col ul{
+  list-style: none;
+  padding: 0;
+}
+
+.footer-col li{
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.footer-col li:hover{
+  transform: translateX(6px);
+}
+
+/* SOCIAL */
+.footer-socials{
+  display: flex;
+  gap: 10px;
+}
+
+.footer-socials svg{
+  transition: 0.3s;
+}
+
+.footer-socials svg:hover{
+  transform: scale(1.2);
+}
+
+/* BOTTOM */
+.footer-bottom{
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  padding-top: 10px;
+}
