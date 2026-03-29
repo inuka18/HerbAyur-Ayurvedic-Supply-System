@@ -219,21 +219,67 @@ export default function Payment() {
         {/* ORDER SUMMARY */}
         <div className="pay-summary">
           <h3>Order Summary</h3>
-          {request?.listName && <p className="pay-listname">📋 {request.listName}</p>}
+          {request?.listName && (
+            <p className="pay-listname">📋 {request.listName}</p>
+          )}
           <p className="pay-supplier">🏭 {supplier?.companyName || `${supplier?.firstName} ${supplier?.lastName}`}</p>
-          <table className="pay-table">
-            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-            <tbody>
-              {bid.items.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.name}</td>
-                  <td>{item.supplyQty} {item.unit}</td>
-                  <td>Rs {item.price.toLocaleString()}</td>
-                  <td>Rs {(item.price * item.supplyQty).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {request?.listName ? (
+            // Group: items from this list vs items from other orders
+            (() => {
+              const listItems  = bid.items.filter(i => i.listName === request.listName || !i.listName);
+              const otherItems = bid.items.filter(i => i.listName && i.listName !== request.listName);
+              const listTotal  = listItems.reduce((s, i) => s + i.price * i.supplyQty, 0);
+              const otherTotal = otherItems.reduce((s, i) => s + i.price * i.supplyQty, 0);
+              return (
+                <>
+                  <div className="pay-group-label">📋 {request.listName}</div>
+                  <table className="pay-table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                    <tbody>
+                      {listItems.map((item, i) => (
+                        <tr key={i}>
+                          <td>{item.name}</td><td>{item.supplyQty} {item.unit}</td>
+                          <td>Rs {item.price.toLocaleString()}</td>
+                          <td>Rs {(item.price * item.supplyQty).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {otherItems.length > 0 && (
+                    <>
+                      <div className="pay-group-label" style={{ marginTop:"1rem" }}>📦 Other Orders</div>
+                      <table className="pay-table">
+                        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                        <tbody>
+                          {otherItems.map((item, i) => (
+                            <tr key={i}>
+                              <td>{item.name}</td><td>{item.supplyQty} {item.unit}</td>
+                              <td>Rs {item.price.toLocaleString()}</td>
+                              <td>Rs {(item.price * item.supplyQty).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <table className="pay-table">
+              <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+              <tbody>
+                {bid.items.map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.name}</td><td>{item.supplyQty} {item.unit}</td>
+                    <td>Rs {item.price.toLocaleString()}</td>
+                    <td>Rs {(item.price * item.supplyQty).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           <div className="pay-total">Grand Total: <span>Rs {total.toLocaleString()}</span></div>
         </div>
 
