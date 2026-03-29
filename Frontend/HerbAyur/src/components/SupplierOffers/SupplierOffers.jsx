@@ -33,6 +33,7 @@ export default function SupplierOffers() {
   const [requests, setRequests]               = useState([]);
   const [offersByRequest, setOffersByRequest] = useState({});
   const [ordersByOffer, setOrdersByOffer]     = useState({});
+  const [allOrders, setAllOrders]             = useState([]);
   const [loading, setLoading]                 = useState(true);
   const [profile, setProfile]                 = useState(null);
   const [profileFeedback, setProfileFeedback] = useState(null);
@@ -40,6 +41,7 @@ export default function SupplierOffers() {
   const [filterType, setFilterType]           = useState({});
   const [visibleLists, setVisibleLists]       = useState({});
   const [activeTab, setActiveTab]             = useState("active");
+  const [reqSubTab, setReqSubTab]             = useState("active");
   const [feedbackModal, setFeedbackModal]     = useState(null);
   const [fbRating, setFbRating]               = useState(0);
   const [fbComment, setFbComment]             = useState("");
@@ -55,15 +57,17 @@ export default function SupplierOffers() {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const [allRequests, myOrders] = await Promise.all([
-        fetch(`${API_BASE}/requests`).then(r => r.json()),
+        fetch(`${API_BASE}/requests`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
         fetch(`${API_BASE}/orders/my-orders`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       ]);
 
       const myRequests = (Array.isArray(allRequests) ? allRequests : []).filter(r => r.customerId === user.id);
       setRequests(myRequests);
 
+      const ordersArr = Array.isArray(myOrders) ? myOrders : [];
+      setAllOrders(ordersArr);
       const ordMap = {};
-      (Array.isArray(myOrders) ? myOrders : []).forEach(o => { ordMap[o.offerId] = o; });
+      ordersArr.forEach(o => { ordMap[o.offerId] = o; });
       setOrdersByOffer(ordMap);
 
       const offersMap = {};
@@ -118,7 +122,6 @@ export default function SupplierOffers() {
 
   const calcTotal = (items) => items.reduce((s, i) => s + i.price * i.supplyQty, 0);
 
-  // Split requests: active = not fully completed, completed = fully completed
   const activeRequests    = requests.filter(r => !r.fullyCompleted);
   const completedRequests = requests.filter(r => r.fullyCompleted);
 
@@ -166,14 +169,12 @@ export default function SupplierOffers() {
             <User size={16}/> Supplier
           </button>
 
-          {/* Pending offer — not yet paid */}
           {bid.status === "Pending" && !order && (
             <button className="accept-btn" onClick={() => navigate("/payment", { state: { bid, supplier, request: req } })}>
               <CreditCard size={16}/> Accept & Pay
             </button>
           )}
 
-          {/* Accepted offer — show pay if no order yet, else show review */}
           {bid.status === "Accepted" && (
             <div style={{ display:"flex", gap:"6px", alignItems:"center", flexWrap:"wrap" }}>
               <span className="accepted">Accepted</span>
@@ -198,14 +199,11 @@ export default function SupplierOffers() {
 
   const renderRequestSection = (req) => {
     const currentFilter  = filterType[req._id] || "All";
-    // Only show non-rejected offers
     let bids = (offersByRequest[req._id] || []).filter(b => b.status !== "Rejected");
     if (currentFilter !== "All") bids = bids.filter(b => b.supplyType === currentFilter);
 
     const coveredNames   = (req.coveredItems || []).map(n => n.toLowerCase().trim());
-    // Items not covered by any paid order
     const uncoveredItems = req.materials.filter(m => !coveredNames.includes(m.name.toLowerCase().trim()));
-    // Items that have no offer at all (no supplier offered them)
     const offeredItemNames = (offersByRequest[req._id] || [])
       .filter(b => b.status !== "Rejected")
       .flatMap(b => b.items.map(i => i.name.toLowerCase().trim()));
@@ -230,7 +228,21 @@ export default function SupplierOffers() {
           </button>
         </div>
 
-        {/* Items with no supplier offer at all */}
+        {/* PROGRESS BAR */}
+        {(() => {
+          const total   = req.materials.length;
+          const ordered = coveredNames.length;
+          const pct     = total ? Math.round((ordered / total) * 100) : 0;
+          return (
+            <div className="so-progress-wrap">
+              <div className="so-progress-bar">
+                <div className="so-progress-fill" style={{ width: `${pct}%`, background: req.fullyCompleted ? "#22c55e" : "#2e7d32" }}/>
+              </div>
+              <span className="so-progress-label">{ordered}/{total} items ordered ({pct}%)</span>
+            </div>
+          );
+        })()}
+
         {!req.fullyCompleted && noSupplierItems.length > 0 && (
           <div className="uncovered-banner">
             <AlertCircle size={16}/>
@@ -241,7 +253,6 @@ export default function SupplierOffers() {
           </div>
         )}
 
-        {/* Items covered by paid orders */}
         {!req.fullyCompleted && coveredNames.length > 0 && (
           <div className="covered-banner">
             <CheckCircle2 size={16}/>
@@ -296,28 +307,29 @@ export default function SupplierOffers() {
   };
 
   if (loading) return <div className="offers-page"><p style={{ padding:"2rem" }}>Loading offers...</p></div>;
-  if (requests.length === 0) return <div className="offers-page"><p style={{ padding:"2rem", color:"#555" }}>No requests found. Post a requirement to get started.</p></div>;
 
   return (
     <div className="offers-page">
       <h1 className="title">Supplier Offers</h1>
 
       <div className="so-tabs">
-        <button className={activeTab === "active" ? "so-tab active" : "so-tab"} onClick={() => setActiveTab("active")}>
+        <button className={reqSubTab === "active" ? "so-tab active" : "so-tab"} onClick={() => setReqSubTab("active")}>
           🔄 Active Requests <span className="so-tab-count">{activeRequests.length}</span>
         </button>
-        <button className={activeTab === "completed" ? "so-tab active" : "so-tab"} onClick={() => setActiveTab("completed")}>
-          ✅ Completed Lists <span className="so-tab-count">{completedRequests.length}</span>
+        <button className={reqSubTab === "completed" ? "so-tab active" : "so-tab"} onClick={() => setReqSubTab("completed")}>
+          ✅ Fully Completed Lists <span className="so-tab-count">{completedRequests.length}</span>
         </button>
       </div>
 
-      {activeTab === "active" ? (
+      {reqSubTab === "active" && (
         activeRequests.length === 0
           ? <div style={{ padding:"2rem", color:"#166534", textAlign:"center", fontSize:"1.1rem" }}>🎉 All your request lists are fully completed!</div>
           : activeRequests.map(req => renderRequestSection(req))
-      ) : (
+      )}
+
+      {reqSubTab === "completed" && (
         completedRequests.length === 0
-          ? <div style={{ padding:"2rem", color:"#555", textAlign:"center" }}>No completed lists yet.</div>
+          ? <div style={{ padding:"2rem", color:"#555", textAlign:"center" }}>No fully completed lists yet.</div>
           : completedRequests.map(req => renderRequestSection(req))
       )}
 
