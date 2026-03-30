@@ -10,8 +10,11 @@ const STATUS_COLORS  = {
 };
 
 export default function SupplierOrders() {
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]             = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterDate, setFilterDate]     = useState("");
 
   const fetchOrders = () => {
     fetch(`${API_BASE}/orders/supplier-orders`, {
@@ -65,49 +68,71 @@ export default function SupplierOrders() {
       {orders.length === 0 ? (
         <div className="ord-empty">No orders yet. Customers will appear here after accepting your offers.</div>
       ) : (
-        <div className="ord-table-wrap">
-          <table className="ord-table">
-            <thead>
-              <tr>
-                <th>#</th><th>Receipt</th><th>Customer</th><th>List</th>
-                <th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o, i) => {
-                const sc = STATUS_COLORS[o.orderStatus] || STATUS_COLORS.Confirmed;
-                return (
-                  <tr key={o._id}>
-                    <td>{i + 1}</td>
-                    <td className="ord-mono">#{o.receiptNo}</td>
-                    <td>
-                      <div style={{ fontWeight:600 }}>{o.customerId?.firstName} {o.customerId?.lastName}</div>
-                      <div style={{ fontSize:"0.78rem", color:"#6b7280" }}>{o.customerId?.phone}</div>
-                    </td>
-                    <td>{o.listName || "—"}</td>
-                    <td>
-                      {o.items.map((item, j) => (
-                        <div key={j} style={{ fontSize:"0.78rem", color:"#374151" }}>{item.name} × {item.supplyQty}{item.unit}</div>
-                      ))}
-                    </td>
-                    <td style={{ fontWeight:700, color:"#15803d" }}>Rs {o.totalAmount.toLocaleString()}</td>
-                    <td><span className="ord-paid-badge">✅ {o.paymentMethod}</span></td>
-                    <td>
-                      <select
-                        className="ord-status-select"
-                        style={{ background: sc.bg, color: sc.color }}
-                        value={o.orderStatus}
-                        onChange={e => updateStatus(o._id, e.target.value)}>
-                        {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ whiteSpace:"nowrap", fontSize:"0.8rem" }}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="ord-filter-bar">
+            <input className="ord-search" placeholder="🔍 Search by customer, list or receipt..." value={search} onChange={e => setSearch(e.target.value)}/>
+            <select className="ord-filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <option value="All">All Statuses</option>
+              {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <input className="ord-filter-select" type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} title="Filter by date"/>
+          </div>
+          <div className="ord-table-wrap">
+            <table className="ord-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Receipt</th><th>Customer</th><th>List</th>
+                  <th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders
+                  .filter(o => {
+                    const matchStatus = filterStatus === "All" || o.orderStatus === filterStatus;
+                    const q = search.toLowerCase();
+                    const matchSearch = !q ||
+                      `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
+                      o.listName?.toLowerCase().includes(q) ||
+                      o.receiptNo?.toLowerCase().includes(q);
+                    const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+                    const matchDate = !filterDate || d === filterDate;
+                    return matchStatus && matchSearch && matchDate;
+                  })
+                  .map((o, i) => {
+                    const sc = STATUS_COLORS[o.orderStatus] || STATUS_COLORS.Confirmed;
+                    return (
+                      <tr key={o._id}>
+                        <td>{i + 1}</td>
+                        <td className="ord-mono">#{o.receiptNo}</td>
+                        <td>
+                          <div style={{ fontWeight:600 }}>{o.customerId?.firstName} {o.customerId?.lastName}</div>
+                          <div style={{ fontSize:"0.78rem", color:"#6b7280" }}>{o.customerId?.phone}</div>
+                        </td>
+                        <td>{o.listName || "—"}</td>
+                        <td>
+                          {o.items.map((item, j) => (
+                            <div key={j} style={{ fontSize:"0.78rem", color:"#374151" }}>{item.name} × {item.supplyQty} {item.unit}</div>
+                          ))}
+                        </td>
+                        <td style={{ fontWeight:700, color:"#15803d" }}>Rs {o.totalAmount.toLocaleString()}</td>
+                        <td><span className="ord-paid-badge">✅ {o.paymentMethod}</span></td>
+                        <td>
+                          <select
+                            className="ord-status-select"
+                            style={{ background: sc.bg, color: sc.color }}
+                            value={o.orderStatus}
+                            onChange={e => updateStatus(o._id, e.target.value)}>
+                            {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        </td>
+                        <td style={{ whiteSpace:"nowrap", fontSize:"0.8rem" }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

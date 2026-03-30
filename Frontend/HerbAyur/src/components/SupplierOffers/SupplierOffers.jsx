@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./SupplierOffers.css";
-import { Eye, User, MapPin, Star, List, Phone, Package, Filter, MessageSquare, CreditCard, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react";
+import "../SupplierMarketplace/SupplierMarketplace.css";
+import { Eye, User, MapPin, Star, List, Phone, Package, Filter, Calendar, MessageSquare, CreditCard, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API_BASE from "../../api";
 
@@ -38,10 +39,11 @@ export default function SupplierOffers() {
   const [profile, setProfile]                 = useState(null);
   const [profileFeedback, setProfileFeedback] = useState(null);
   const [expanded, setExpanded]               = useState({});
-  const [filterType, setFilterType]           = useState({});
   const [visibleLists, setVisibleLists]       = useState({});
-  const [activeTab, setActiveTab]             = useState("active");
   const [reqSubTab, setReqSubTab]             = useState("active");
+  const [soSearch, setSoSearch]               = useState("");
+  const [soDate, setSoDate]                   = useState("");
+  const [soStatus, setSoStatus]               = useState("All");
   const [feedbackModal, setFeedbackModal]     = useState(null);
   const [fbRating, setFbRating]               = useState(0);
   const [fbComment, setFbComment]             = useState("");
@@ -125,6 +127,20 @@ export default function SupplierOffers() {
   const activeRequests    = requests.filter(r => !r.fullyCompleted);
   const completedRequests = requests.filter(r => r.fullyCompleted);
 
+  const applyFilters = (list) => list.filter(req => {
+    const q = soSearch.toLowerCase();
+    const matchSearch = !q || (req.listName || req.customer?.name || "").toLowerCase().includes(q) || req.customer?.location?.toLowerCase().includes(q);
+    const reqDate = req.requiredDate ? req.requiredDate.slice(0, 10) : "";
+    const matchDate = !soDate || reqDate === soDate;
+    const covered = (req.coveredItems || []).length;
+    const matchStatus =
+      soStatus === "All"       ? true :
+      soStatus === "Completed" ? req.fullyCompleted :
+      soStatus === "Partial"   ? covered > 0 && !req.fullyCompleted :
+      soStatus === "No Orders" ? covered === 0 : true;
+    return matchSearch && matchDate && matchStatus;
+  });
+
   const renderOfferCard = (bid, req) => {
     const showAll  = expanded[bid._id];
     const items    = showAll ? bid.items : bid.items.slice(0, 5);
@@ -198,16 +214,16 @@ export default function SupplierOffers() {
   };
 
   const renderRequestSection = (req) => {
-    const currentFilter  = filterType[req._id] || "All";
-    let bids = (offersByRequest[req._id] || []).filter(b => b.status !== "Rejected");
-    if (currentFilter !== "All") bids = bids.filter(b => b.supplyType === currentFilter);
-
+    const bids = (offersByRequest[req._id] || []).filter(b => b.status !== "Rejected");
     const coveredNames   = (req.coveredItems || []).map(n => n.toLowerCase().trim());
     const uncoveredItems = req.materials.filter(m => !coveredNames.includes(m.name.toLowerCase().trim()));
     const offeredItemNames = (offersByRequest[req._id] || [])
       .filter(b => b.status !== "Rejected")
       .flatMap(b => b.items.map(i => i.name.toLowerCase().trim()));
     const noSupplierItems = uncoveredItems.filter(m => !offeredItemNames.includes(m.name.toLowerCase().trim()));
+    const total   = req.materials.length;
+    const ordered = coveredNames.length;
+    const pct     = total ? Math.round((ordered / total) * 100) : 0;
 
     return (
       <div key={req._id} className="list-section modern-list">
@@ -229,26 +245,23 @@ export default function SupplierOffers() {
         </div>
 
         {/* PROGRESS BAR */}
-        {(() => {
-          const total   = req.materials.length;
-          const ordered = coveredNames.length;
-          const pct     = total ? Math.round((ordered / total) * 100) : 0;
-          return (
-            <div className="so-progress-wrap">
-              <div className="so-progress-bar">
-                <div className="so-progress-fill" style={{ width: `${pct}%`, background: req.fullyCompleted ? "#22c55e" : "#2e7d32" }}/>
-              </div>
-              <span className="so-progress-label">{ordered}/{total} items ordered ({pct}%)</span>
-            </div>
-          );
-        })()}
+        <div className="so-progress-wrap">
+          <div className="so-progress-bar">
+            <div className="so-progress-fill" style={{ width: `${pct}%`, background: req.fullyCompleted ? "#22c55e" : "#2e7d32" }}/>
+          </div>
+          <span className="so-progress-label">{ordered}/{total} items ordered ({pct}%)</span>
+        </div>
 
         {!req.fullyCompleted && noSupplierItems.length > 0 && (
           <div className="uncovered-banner">
             <AlertCircle size={16}/>
             <div>
-              <strong>No supplier has offered these {noSupplierItems.length} item{noSupplierItems.length > 1 ? "s" : ""} yet:</strong>
-              <span style={{ marginLeft:"6px" }}>{noSupplierItems.map(m => m.name).join(", ")}</span>
+              <strong>No supplier has offered {noSupplierItems.length} item{noSupplierItems.length > 1 ? "s" : ""} yet:</strong>
+              <div className="banner-chips">
+                {noSupplierItems.map((m, i) => (
+                  <span key={i} className="banner-chip banner-chip-warn">{m.name} — {m.quantity} {m.unit}</span>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -256,19 +269,16 @@ export default function SupplierOffers() {
         {!req.fullyCompleted && coveredNames.length > 0 && (
           <div className="covered-banner">
             <CheckCircle2 size={16}/>
-            <span>{coveredNames.length} item{coveredNames.length > 1 ? "s" : ""} already ordered: {coveredNames.join(", ")}</span>
+            <div>
+              <strong>{coveredNames.length} item{coveredNames.length > 1 ? "s" : ""} already ordered:</strong>
+              <div className="banner-chips">
+                {req.materials.filter(m => coveredNames.includes(m.name.toLowerCase().trim())).map((m, i) => (
+                  <span key={i} className="banner-chip banner-chip-ok">{m.name} — {m.quantity} {m.unit}</span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-
-        <div className="filter-box">
-          <Filter size={16}/>
-          <select value={currentFilter} onChange={e => setFilterType(p => ({ ...p, [req._id]: e.target.value }))}>
-            <option value="All">All Suppliers</option>
-            <option value="Whole">Whole List</option>
-            <option value="Partial">Partial Supply</option>
-            <option value="Item">Item by Item</option>
-          </select>
-        </div>
 
         {visibleLists[req._id] && (
           <table className="items-table">
@@ -308,29 +318,82 @@ export default function SupplierOffers() {
 
   if (loading) return <div className="offers-page"><p style={{ padding:"2rem" }}>Loading offers...</p></div>;
 
+  const filteredActive    = applyFilters(activeRequests);
+  const filteredCompleted = applyFilters(completedRequests);
+  const totalOffers       = Object.values(offersByRequest).flat().filter(b => b.status !== "Rejected").length;
+
   return (
     <div className="offers-page">
       <h1 className="title">Supplier Offers</h1>
 
+      {/* STATS BAR — same style as SupplierMarketplace */}
+      <div className="sm-stats-bar">
+        <div className="sm-stat">
+          <span className="sm-stat-num">{requests.length}</span>
+          <span className="sm-stat-label">Total Requests</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{activeRequests.length}</span>
+          <span className="sm-stat-label">Active</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{completedRequests.length}</span>
+          <span className="sm-stat-label">Completed</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{allOrders.length}</span>
+          <span className="sm-stat-label">Orders Placed</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{totalOffers}</span>
+          <span className="sm-stat-label">Offers Received</span>
+        </div>
+      </div>
+
+      {/* FILTER BAR — same style as SupplierMarketplace */}
+      <div className="sm-controls">
+        <div className="sm-filter-box">
+          <Filter size={16}/>
+          <input placeholder="Search list or location..." value={soSearch} onChange={e => setSoSearch(e.target.value)} style={{ minWidth:160 }}/>
+        </div>
+        <div className="sm-filter-box">
+          <Calendar size={15}/>
+          <input type="date" value={soDate} onChange={e => setSoDate(e.target.value)} title="Filter by required date"/>
+        </div>
+        <div className="sm-sort-box">
+          <select value={soStatus} onChange={e => setSoStatus(e.target.value)}>
+            <option value="All">All Requests</option>
+            <option value="No Orders">No Orders Yet</option>
+            <option value="Partial">Partially Ordered</option>
+            <option value="Completed">Fully Completed</option>
+          </select>
+        </div>
+      </div>
+
+      {/* TABS */}
       <div className="so-tabs">
         <button className={reqSubTab === "active" ? "so-tab active" : "so-tab"} onClick={() => setReqSubTab("active")}>
-          🔄 Active Requests <span className="so-tab-count">{activeRequests.length}</span>
+          🔄 Active Requests <span className="so-tab-count">{filteredActive.length}</span>
         </button>
         <button className={reqSubTab === "completed" ? "so-tab active" : "so-tab"} onClick={() => setReqSubTab("completed")}>
-          ✅ Fully Completed Lists <span className="so-tab-count">{completedRequests.length}</span>
+          ✅ Fully Completed Lists <span className="so-tab-count">{filteredCompleted.length}</span>
         </button>
       </div>
 
       {reqSubTab === "active" && (
-        activeRequests.length === 0
-          ? <div style={{ padding:"2rem", color:"#166534", textAlign:"center", fontSize:"1.1rem" }}>🎉 All your request lists are fully completed!</div>
-          : activeRequests.map(req => renderRequestSection(req))
+        filteredActive.length === 0
+          ? <div style={{ padding:"2rem", color:"#166534", textAlign:"center", fontSize:"1.1rem" }}>🎉 No active requests match your filters.</div>
+          : filteredActive.map(req => renderRequestSection(req))
       )}
 
       {reqSubTab === "completed" && (
-        completedRequests.length === 0
-          ? <div style={{ padding:"2rem", color:"#555", textAlign:"center" }}>No fully completed lists yet.</div>
-          : completedRequests.map(req => renderRequestSection(req))
+        filteredCompleted.length === 0
+          ? <div style={{ padding:"2rem", color:"#555", textAlign:"center" }}>No completed lists match your filters.</div>
+          : filteredCompleted.map(req => renderRequestSection(req))
       )}
 
       {/* SUPPLIER PROFILE MODAL */}

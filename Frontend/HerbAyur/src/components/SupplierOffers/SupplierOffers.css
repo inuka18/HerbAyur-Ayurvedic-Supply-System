@@ -639,6 +639,25 @@ width:fit-content;
   margin-bottom: 0.8rem;
 }
 
+.banner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.banner-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.banner-chip-warn { background: #fde68a; color: #78350f; }
+.banner-chip-ok   { background: #bbf7d0; color: #14532d; }
+
 /* MY ORDERS — grouped by list */
 .order-list-group {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
