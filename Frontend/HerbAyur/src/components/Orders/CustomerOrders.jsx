@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Printer, X, CheckCircle2, Star, MessageSquare, ShoppingBag, AlertCircle, List } from "lucide-react";
+import { Printer, X, CheckCircle2, Star, MessageSquare, ShoppingBag, AlertCircle, List, Filter, Calendar } from "lucide-react";
 import API_BASE from "../../api";
 import "./Orders.css";
+import "../SupplierMarketplace/SupplierMarketplace.css";
 
 const STATUS_COLORS = {
   Confirmed:  { bg: "#dbeafe", color: "#1d4ed8" },
@@ -106,6 +107,10 @@ export default function CustomerOrders() {
   const [fbError, setFbError]           = useState("");
   const [fbSuccess, setFbSuccess]       = useState("");
   const [fbLoading, setFbLoading]       = useState(false);
+
+  const [search, setSearch]             = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterDate, setFilterDate]     = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -249,9 +254,18 @@ export default function CustomerOrders() {
 
   if (loading) return <div className="ord-page"><p className="ord-loading">Loading orders...</p></div>;
 
-  // Group orders by listName
+  // Group orders by listName (after filtering)
+  const filteredOrders = orders.filter(o => {
+    const matchStatus = filterStatus === "All" || o.orderStatus === filterStatus;
+    const q = search.toLowerCase();
+    const matchSearch = !q || o.listName?.toLowerCase().includes(q) || o.supplierName?.toLowerCase().includes(q) || o.receiptNo?.toLowerCase().includes(q);
+    const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+    const matchDate = !filterDate || d === filterDate;
+    return matchStatus && matchSearch && matchDate;
+  });
+
   const groups = {};
-  orders.forEach(o => {
+  filteredOrders.forEach(o => {
     const key = o.listName || "Other Orders";
     if (!groups[key]) groups[key] = [];
     groups[key].push(o);
@@ -264,7 +278,55 @@ export default function CustomerOrders() {
         <span className="ord-count">{orders.length} order{orders.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {orders.length === 0 ? (
+      {/* STATS BAR */}
+      <div className="sm-stats-bar">
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.length}</span>
+          <span className="sm-stat-label">Total Orders</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Confirmed").length}</span>
+          <span className="sm-stat-label">Confirmed</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Processing").length}</span>
+          <span className="sm-stat-label">Processing</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Delivered").length}</span>
+          <span className="sm-stat-label">Delivered</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">Rs {orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}</span>
+          <span className="sm-stat-label">Total Spent</span>
+        </div>
+      </div>
+
+      {/* FILTER BAR */}
+      <div className="sm-controls">
+        <div className="sm-filter-box">
+          <Filter size={16}/>
+          <input placeholder="Search list, supplier or receipt..." value={search} onChange={e => setSearch(e.target.value)} style={{ minWidth:160 }}/>
+        </div>
+        <div className="sm-filter-box">
+          <Calendar size={15}/>
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} title="Filter by order date"/>
+        </div>
+        <div className="sm-sort-box">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <option value="All">All Statuses</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Processing">Processing</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+      </div>
+
+      {filteredOrders.length === 0 ? (
         <div className="ord-empty">No orders yet. Accept a supplier offer to place an order.</div>
       ) : (
         Object.entries(groups).map(([listName, groupOrders]) => {

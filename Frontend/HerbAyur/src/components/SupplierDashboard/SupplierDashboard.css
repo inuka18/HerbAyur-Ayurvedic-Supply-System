@@ -1,28 +1,80 @@
+/* ── DASHBOARD HEADER — matches AdminDashboard ── */
+.sd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 2rem;
+  background: linear-gradient(135deg, #1b5e20, #2e7d32);
+  box-shadow: 0 4px 20px rgba(27,94,32,0.25);
+  flex-wrap: wrap;
+}
+
+.sd-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.sd-header-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sd-header-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: white;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.sd-header-sub {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.7);
+  margin: 2px 0 0;
+}
+
+/* ── TABS ── */
 .sd-tabs {
   display: flex;
-  gap: 0.5rem;
-  padding: 1rem 2rem 0;
-  background: #f0fdf4;
-  border-bottom: 2px solid #d1fae5;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .sd-tab {
-  padding: 0.55rem 1.4rem;
-  border: 1.5px solid #d1fae5;
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
-  background: white;
-  color: #166534;
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 0.5rem 1.1rem;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.sd-tab:hover:not(.active) {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border-color: rgba(255,255,255,0.5);
 }
 
 .sd-tab.active {
-  background: #166534;
-  color: white;
-  border-color: #166534;
+  background: white;
+  color: #1b5e20;
+  border-color: white;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
 }
-
-.sd-tab:hover:not(.active) { background: #dcfce7; }

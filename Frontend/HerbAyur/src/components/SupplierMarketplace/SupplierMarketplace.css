@@ -525,10 +525,10 @@ transform:translateY(-1px);
   .sm-stat-divider { display: none; }
 }
 
-/* OVERRIDE STATS BAR — color-coded cards */
+/* OVERRIDE STATS BAR — color-coded cards, auto columns */
 .sm-stats-bar {
   display: grid !important;
-  grid-template-columns: repeat(5, 1fr) !important;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
   gap: 1rem !important;
   margin-bottom: 1.5rem;
   background: transparent !important;
@@ -543,54 +543,69 @@ transform:translateY(-1px);
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.1rem 0.8rem !important;
-  border-radius: 14px;
+  padding: 1.2rem 0.8rem !important;
+  border-radius: 16px;
   background: white;
   border: 1.5px solid #e5e7eb;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.06);
   transition: transform 0.2s, box-shadow 0.2s;
   gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sm-stat::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 4px;
+  border-radius: 16px 16px 0 0;
 }
 
 .sm-stat:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
 }
 
-/* Available Requests — teal */
-.sm-stat:nth-child(1) {
-  border-color: #99f6e4;
-  background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
-}
+/* Card 1 — teal */
+.sm-stat:nth-child(1) { border-color: #99f6e4; background: linear-gradient(160deg,#f0fdfa,#ccfbf1); }
+.sm-stat:nth-child(1)::before { background: #0d9488; }
 .sm-stat:nth-child(1) .sm-stat-num { color: #0f766e; }
 
-/* My Total Offers — blue */
-.sm-stat:nth-child(2) {
-  border-color: #bfdbfe;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-}
+/* Card 2 — blue */
+.sm-stat:nth-child(2) { border-color: #bfdbfe; background: linear-gradient(160deg,#eff6ff,#dbeafe); }
+.sm-stat:nth-child(2)::before { background: #2563eb; }
 .sm-stat:nth-child(2) .sm-stat-num { color: #1d4ed8; }
 
-/* Pending — amber */
-.sm-stat:nth-child(3) {
-  border-color: #fde68a;
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-}
-.sm-stat:nth-child(3) .sm-stat-num { color: #d97706; }
+/* Card 3 — green */
+.sm-stat:nth-child(3) { border-color: #86efac; background: linear-gradient(160deg,#f0fdf4,#dcfce7); }
+.sm-stat:nth-child(3)::before { background: #16a34a; }
+.sm-stat:nth-child(3) .sm-stat-num { color: #15803d; }
 
-/* Accepted — green */
-.sm-stat:nth-child(4) {
-  border-color: #86efac;
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-}
-.sm-stat:nth-child(4) .sm-stat-num { color: #15803d; }
+/* Card 4 — amber */
+.sm-stat:nth-child(4) { border-color: #fde68a; background: linear-gradient(160deg,#fffbeb,#fef3c7); }
+.sm-stat:nth-child(4)::before { background: #d97706; }
+.sm-stat:nth-child(4) .sm-stat-num { color: #b45309; }
 
-/* Rejected — red */
-.sm-stat:nth-child(5) {
-  border-color: #fca5a5;
-  background: linear-gradient(135deg, #fff5f5, #fee2e2);
-}
-.sm-stat:nth-child(5) .sm-stat-num { color: #dc2626; }
+/* Card 5 — purple */
+.sm-stat:nth-child(5) { border-color: #c4b5fd; background: linear-gradient(160deg,#f5f3ff,#ede9fe); }
+.sm-stat:nth-child(5)::before { background: #7c3aed; }
+.sm-stat:nth-child(5) .sm-stat-num { color: #6d28d9; }
+
+/* Card 6 — red */
+.sm-stat:nth-child(6) { border-color: #fca5a5; background: linear-gradient(160deg,#fff5f5,#fee2e2); }
+.sm-stat:nth-child(6)::before { background: #dc2626; }
+.sm-stat:nth-child(6) .sm-stat-num { color: #b91c1c; }
+
+/* Card 7 — cyan */
+.sm-stat:nth-child(7) { border-color: #a5f3fc; background: linear-gradient(160deg,#ecfeff,#cffafe); }
+.sm-stat:nth-child(7)::before { background: #0891b2; }
+.sm-stat:nth-child(7) .sm-stat-num { color: #0e7490; }
+
+/* Card 8 — lime */
+.sm-stat:nth-child(8) { border-color: #d9f99d; background: linear-gradient(160deg,#f7fee7,#ecfccb); }
+.sm-stat:nth-child(8)::before { background: #65a30d; }
+.sm-stat:nth-child(8) .sm-stat-num { color: #4d7c0f; }
 
 .sm-stat-num {
   font-size: 2rem !important;
@@ -608,6 +623,52 @@ transform:translateY(-1px);
 }
 
 .sm-stat-divider { display: none !important; }
+
+/* FILTER CONTROLS — improved */
+.sm-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.sm-filter-box,
+.sm-sort-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 9px 16px;
+  border-radius: 25px;
+  border: 1.5px solid #c8e6c9;
+  box-shadow: 0 2px 8px rgba(46,125,50,0.08);
+  transition: 0.2s;
+  color: #2e7d32;
+}
+
+.sm-filter-box:hover,
+.sm-sort-box:hover {
+  border-color: #2e7d32;
+  box-shadow: 0 4px 14px rgba(46,125,50,0.18);
+  transform: translateY(-1px);
+}
+
+.sm-filter-box svg { color: #2e7d32; flex-shrink: 0; }
+
+.sm-filter-box input,
+.sm-sort-box select {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: #1a3c34;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.sm-filter-box input::placeholder { color: #9ca3af; }
 
 @media (max-width: 768px) {
   .sm-stats-bar { grid-template-columns: repeat(3, 1fr) !important; }

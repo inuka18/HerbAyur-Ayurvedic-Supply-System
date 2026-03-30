@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import API_BASE from "../../api";
 import "./AdminDashboard.css";
+import { AdminReport } from "../Reports/Reports";
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  LineChart, Line,
 } from "recharts";
 
 const token = () => localStorage.getItem("token");
@@ -42,6 +42,12 @@ export default function AdminDashboard() {
   const [stats, setStats]           = useState(null);
   const [requests, setRequests]     = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [ordSearch, setOrdSearch]     = useState("");
+  const [ordStatus, setOrdStatus]     = useState("All");
+  const [ordPayment, setOrdPayment]   = useState("All");
+  const [ordDate, setOrdDate]         = useState("");
+  const [supSearch, setSupSearch]     = useState("");
+  const [supStatus, setSupStatus]     = useState("All");
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -122,31 +128,27 @@ export default function AdminDashboard() {
     name: s, value: adminOrders.filter(o=>o.orderStatus===s).length,
   })).filter(d=>d.value>0);
 
-  const revenueByMonth = (() => {
-    const map = {};
-    adminOrders.forEach(o => {
-      const m = new Date(o.createdAt).toLocaleString("default",{month:"short",year:"2-digit"});
-      map[m] = (map[m]||0) + o.totalAmount;
-    });
-    return Object.entries(map).slice(-6).map(([name,revenue])=>({name,revenue}));
-  })();
-
   const paymentMethodData = ["Card","Bank Transfer","Cash on Delivery"].map(m=>({
     name:m, value: adminOrders.filter(o=>o.paymentMethod===m).length,
   })).filter(d=>d.value>0);
 
-  const totalRevenue = adminOrders.filter(o=>o.orderStatus!=="Cancelled").reduce((s,o)=>s+o.totalAmount,0);
-
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h2>🌿 Admin Dashboard</h2>
+        <div className="sd-header-left">
+          <span className="sd-header-icon">🌿</span>
+          <div>
+            <h2 className="sd-header-title">Admin Dashboard</h2>
+            <p className="sd-header-sub">Platform management & overview</p>
+          </div>
+        </div>
         <div className="admin-tabs">
           {[
             { id:"overview",   label:"📊 Overview" },
             { id:"suppliers",  label:"🏭 Suppliers", badge: pendingCount>0 ? pendingCount : null },
             { id:"messages",   label:"✉️ Messages",  count: messages.length },
             { id:"orders",     label:"🛒 Orders",    count: adminOrders.length },
+            { id:"reports",    label:"📋 Reports" },
           ].map(t => (
             <button key={t.id} className={tab===t.id?"active":""} onClick={()=>setTab(t.id)}>
               {t.label}
@@ -157,7 +159,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {loading ? <div className="admin-state">Loading...</div> : (
+      {loading ? <div className="admin-state" style={{margin:"2rem"}}>Loading...</div> : (
 
         /* ── OVERVIEW ── */
         tab==="overview" ? (
@@ -168,7 +170,6 @@ export default function AdminDashboard() {
               <StatCard icon="👤" label="Total Customers"  value={stats?.totalCustomers||0}  color="#3b82f6"/>
               <StatCard icon="📋" label="Total Requests"   value={requests.length}            color="#f59e0b"/>
               <StatCard icon="🛒" label="Total Orders"     value={adminOrders.length}         color="#8b5cf6"/>
-              <StatCard icon="💰" label="Total Revenue"    value={`Rs ${totalRevenue.toLocaleString()}`} color="#06b6d4"/>
               <StatCard icon="⏳" label="Pending Suppliers" value={stats?.pendingSuppliers||0} color="#ef4444"/>
             </div>
 
@@ -196,20 +197,6 @@ export default function AdminDashboard() {
                     </Pie>
                     <Tooltip/><Legend/>
                   </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Revenue Bar Chart */}
-              <div className="adm-chart-card adm-chart-wide">
-                <h3>Monthly Revenue (Rs)</h3>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={revenueByMonth}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                    <XAxis dataKey="name" tick={{fontSize:12}}/>
-                    <YAxis tick={{fontSize:12}} tickFormatter={v=>`Rs ${(v/1000).toFixed(0)}k`}/>
-                    <Tooltip formatter={v=>`Rs ${v.toLocaleString()}`}/>
-                    <Bar dataKey="revenue" fill="#22c55e" radius={[6,6,0,0]}/>
-                  </BarChart>
                 </ResponsiveContainer>
               </div>
 
@@ -282,10 +269,26 @@ export default function AdminDashboard() {
               )}
 
               <div className="admin-table-wrap">
+                <div className="adm-filter-bar">
+                  <input className="adm-search" placeholder="🔍 Search by name, company or email..." value={supSearch} onChange={e => setSupSearch(e.target.value)}/>
+                  <select className="adm-filter-select" value={supStatus} onChange={e => setSupStatus(e.target.value)}>
+                    <option value="All">All Statuses</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Certification</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {suppliers.map((s,i)=>(
+                    {suppliers
+                      .filter(s => {
+                        const matchStatus = supStatus === "All" || s.status === supStatus;
+                        const q = supSearch.toLowerCase();
+                        const matchSearch = !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) || s.companyName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+                        return matchStatus && matchSearch;
+                      })
+                      .map((s,i)=>(
                       <tr key={s._id}>
                         <td>{i+1}</td><td>{s.firstName} {s.lastName}{s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}</td><td>{s.companyName||"—"}</td>
                         <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
@@ -328,20 +331,76 @@ export default function AdminDashboard() {
           )
 
         /* ── ORDERS ── */
-        ) : (
+        ) : tab==="orders" ? (
           adminOrders.length===0 ? <div className="admin-state">No orders yet.</div> : (
             <div className="admin-table-wrap">
+              {/* ORDER SUMMARY STATS */}
+              <div className="adm-order-stats">
+                <div className="adm-ostat adm-ostat-total">
+                  <span className="adm-ostat-num">{adminOrders.length}</span>
+                  <span className="adm-ostat-label">Total Orders</span>
+                </div>
+                <div className="adm-ostat adm-ostat-confirmed">
+                  <span className="adm-ostat-num">{adminOrders.filter(o=>o.orderStatus==="Confirmed").length}</span>
+                  <span className="adm-ostat-label">Confirmed</span>
+                </div>
+                <div className="adm-ostat adm-ostat-processing">
+                  <span className="adm-ostat-num">{adminOrders.filter(o=>o.orderStatus==="Processing").length}</span>
+                  <span className="adm-ostat-label">Processing</span>
+                </div>
+                <div className="adm-ostat adm-ostat-delivered">
+                  <span className="adm-ostat-num">{adminOrders.filter(o=>o.orderStatus==="Delivered").length}</span>
+                  <span className="adm-ostat-label">Delivered</span>
+                </div>
+                <div className="adm-ostat adm-ostat-card">
+                  <span className="adm-ostat-num">{adminOrders.filter(o=>o.paymentMethod==="Card").length}</span>
+                  <span className="adm-ostat-label">Card Payments</span>
+                </div>
+                <div className="adm-ostat adm-ostat-cod">
+                  <span className="adm-ostat-num">{adminOrders.filter(o=>o.paymentMethod==="Cash on Delivery").length}</span>
+                  <span className="adm-ostat-label">COD Payments</span>
+                </div>
+              </div>
+              <div className="adm-filter-bar">
+                <input className="adm-search" placeholder="🔍 Search by customer, supplier, list or receipt..." value={ordSearch} onChange={e => setOrdSearch(e.target.value)}/>
+                <select className="adm-filter-select" value={ordStatus} onChange={e => setOrdStatus(e.target.value)}>
+                  <option value="All">All Statuses</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Processing">Processing</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+                <select className="adm-filter-select" value={ordPayment} onChange={e => setOrdPayment(e.target.value)}>
+                  <option value="All">All Payments</option>
+                  <option value="Card">Card</option>
+                  <option value="Cash on Delivery">COD</option>
+                </select>
+                <input className="adm-filter-select" type="date" value={ordDate} onChange={e => setOrdDate(e.target.value)} title="Filter by date"/>
+              </div>
               <table className="admin-table">
                 <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
                 <tbody>
-                  {adminOrders.map((o,i)=>(
+                  {adminOrders
+                    .filter(o => {
+                      const matchStatus  = ordStatus  === "All" || o.orderStatus   === ordStatus;
+                      const matchPayment = ordPayment === "All" || o.paymentMethod === ordPayment;
+                      const q = ordSearch.toLowerCase();
+                      const matchSearch  = !q ||
+                        `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
+                        (o.supplierId?.companyName || `${o.supplierId?.firstName} ${o.supplierId?.lastName}`).toLowerCase().includes(q) ||
+                        o.listName?.toLowerCase().includes(q) ||
+                        o.receiptNo?.toLowerCase().includes(q);
+                      const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+                      const matchDate = !ordDate || d === ordDate;
+                      return matchStatus && matchPayment && matchSearch && matchDate;
+                    })
+                    .map((o,i)=>(
                     <tr key={o._id}>
                       <td>{i+1}</td>
                       <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"#6b7280"}}>#{o.receiptNo}</td>
                       <td><div style={{fontWeight:600}}>{o.customerId?.firstName} {o.customerId?.lastName}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.phone}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.address}</div></td>
                       <td><div style={{fontWeight:600}}>{o.supplierId?.companyName||`${o.supplierId?.firstName} ${o.supplierId?.lastName}`}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.supplierId?.phone}</div></td>
                       <td>{o.listName||"—"}</td>
-                      <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty}{item.unit}</div>)}</td>
+                      <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
                       <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
                       <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
                       <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
@@ -352,7 +411,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           )
-        )
+        ) : <AdminReport />
       )}
     </div>
   );
