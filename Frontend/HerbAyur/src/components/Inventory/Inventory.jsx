@@ -124,6 +124,31 @@ function Inventory() {
 
       {success && <div className="inv-success">✅ {success}</div>}
 
+      {!loading && items.length > 0 && (
+        <div className="inv-stats">
+          <div className="inv-stat-card inv-stat-total">
+            <span className="inv-stat-num">{items.length}</span>
+            <span className="inv-stat-label">Total Items</span>
+          </div>
+          <div className="inv-stat-card inv-stat-priced">
+            <span className="inv-stat-num">{items.filter(i => i.price > 0).length}</span>
+            <span className="inv-stat-label">With Price</span>
+          </div>
+          <div className="inv-stat-card inv-stat-missing">
+            <span className="inv-stat-num">{items.filter(i => !i.price || i.price === 0).length}</span>
+            <span className="inv-stat-label">Missing Price</span>
+          </div>
+          <div className="inv-stat-card inv-stat-instock">
+            <span className="inv-stat-num">{items.filter(i => i.quantity > 0).length}</span>
+            <span className="inv-stat-label">In Stock</span>
+          </div>
+          <div className="inv-stat-card inv-stat-out">
+            <span className="inv-stat-num">{items.filter(i => i.quantity === 0).length}</span>
+            <span className="inv-stat-label">Out of Stock</span>
+          </div>
+        </div>
+      )}
+
       {loading ? <p className="inv-loading">Loading inventory...</p> : items.length === 0 ? (
         <div className="inv-empty"><PackageOpen size={48} color="#d1d5db"/><p>No inventory items yet. Add your first item!</p></div>
       ) : (
@@ -146,17 +171,19 @@ function Inventory() {
                       ? item.aliases.map((a, j) => <span key={j} className="alias-tag">{a}</span>)
                       : <span style={{ color:"#9ca3af" }}>—</span>}
                   </td>
-                  <td style={{ fontWeight:600, color:"#15803d" }}>
+                  <td className="inv-price-cell">
                     {item.price > 0 ? (
                       <div>
-                        <div>Rs {item.price.toLocaleString()} / {item.unit}</div>
+                        <div className="inv-price-main">Rs {item.price.toLocaleString()} / {item.unit}</div>
                         {getConvertedPrice(item.unit, item.price) && (
-                          <div style={{ fontSize:"0.72rem", color:"#6b7280", fontWeight:400 }}>
+                          <div className="inv-price-converted">
                             ≈ {getConvertedPrice(item.unit, item.price)}
                           </div>
                         )}
                       </div>
-                    ) : <span style={{color:"#9ca3af"}}>—</span>}
+                    ) : (
+                      <span className="inv-price-missing">⚠ Set price</span>
+                    )}
                   </td>
                   <td>
                     {restockId === item._id ? (
@@ -217,13 +244,14 @@ function Inventory() {
                 </div>
               </div>
               <div className="inv-field">
-                <label>Price per Unit (Rs)</label>
-                <input type="number" name="price" value={form.price} onChange={handleChange} min="0" placeholder="e.g. 450"/>
+                <label>Price per Unit (Rs) <span style={{color:"#dc2626"}}>*</span></label>
+                <input type="number" name="price" value={form.price} onChange={handleChange} min="0.01" step="0.01" placeholder="e.g. 450" required/>
                 {getConvertedPrice(form.unit, form.price) && (
                   <span className="inv-price-hint">
                     ≈ {getConvertedPrice(form.unit, form.price)}
                   </span>
                 )}
+                <span style={{fontSize:"0.75rem",color:"#6b7280",marginTop:2}}>This price is used to auto-fill offers in SupplierConfirmation.</span>
               </div>
               {error && <div className="inv-error">⚠ {error}</div>}
               <div className="inv-modal-actions">

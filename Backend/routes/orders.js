@@ -41,6 +41,41 @@ router.post("/", auth, async (req, res) => {
       await Request.findByIdAndUpdate(offer.requestId._id, { coveredItems: newCovered, fullyCompleted });
     }
 
+    // Mark the paid offer as Accepted
+    await Offer.findByIdAndUpdate(offerId, { status: "Accepted" });
+
+    // Reject all other offers that supply any of the same items, notify each supplier
+    const paidItemNames = offer.items.map(i => i.name.toLowerCase().trim());
+    const siblings = await Offer.find({
+      requestId: offer.requestId._id,
+      _id:       { $ne: offerId },
+      status:    { $ne: "Rejected" },
+    });
+
+    for (const sibling of siblings) {
+      const siblingItemNames = sibling.items.map(i => i.name.toLowerCase().trim());
+      const overlapping = siblingItemNames.filter(n => paidItemNames.includes(n));
+
+      // Reject if: whole supply OR any item overlaps with the paid offer
+      const shouldReject = offer.supplyType === "Whole" ||
+                           sibling.supplyType === "Whole" ||
+                           overlapping.length > 0;
+
+      if (shouldReject) {
+        await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+        const reason = offer.supplyType === "Whole"
+          ? `the customer accepted a whole-list offer from another supplier`
+          : `the customer accepted another supplier for: ${overlapping.map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(", ")}`;
+        await Notification.create({
+          recipient:     sibling.supplierId,
+          recipientRole: "supplier",
+          message:       `Your offer for "${offer.requestId.listName || "a request"}" was rejected because ${reason}.`,
+          type:          "offer_accepted",
+          relatedId:     sibling._id,
+        });
+      }
+    }
+
     // Notify supplier
     await Notification.create({
       recipient:     offer.supplierId._id,

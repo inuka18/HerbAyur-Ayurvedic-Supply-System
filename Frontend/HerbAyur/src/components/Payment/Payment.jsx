@@ -320,7 +320,7 @@ export default function Payment() {
       </div>
 
       {showReceipt && order && (
-        <Receipt order={order} onClose={() => { setShowReceipt(false); navigate("/customer-dashboard"); }}/>
+        <Receipt order={order} onClose={() => { setShowReceipt(false); navigate("/SupplierOffers"); }}/>
       )}
     </div>
   );

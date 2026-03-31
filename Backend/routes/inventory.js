@@ -50,9 +50,9 @@ router.get("/", auth, async (req, res) => {
 router.post("/", auth, async (req, res) => {
   if (req.user.role !== "supplier") return res.status(403).json({ message: "Forbidden" });
   try {
-    const { name, quantity, unit, aliases } = req.body;
+    const { name, category, quantity, unit, price, aliases } = req.body;
     const item = await Inventory.create({
-      supplierId: req.user.id, name, quantity, unit,
+      supplierId: req.user.id, name, category, quantity, unit, price: price || 0,
       aliases: aliases || [],
     });
     res.status(201).json(item);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import API_BASE from "../../api";
 import "./RequestForm.css";
 import { User, Phone, MapPin, Calendar, Plus, Trash2, Send, Edit, Check, X, AlertCircle, CheckCircle2, Loader2, FileText } from "lucide-react";
@@ -7,14 +7,25 @@ import { CATEGORIES, CONDITIONS, PARTS, getUnits, isValidUnit, DEFAULT_MATERIAL 
 
 function RequestForm() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill  = location.state?.prefill;
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [loadingUser, setLoadingUser]   = useState(true);
   const [customer, setCustomer]         = useState({ name: "", phone: "", location: "" });
   const [requiredDate, setRequiredDate] = useState("");
-  const [listName, setListName]         = useState("");
-  const [materials, setMaterials]       = useState([{ ...DEFAULT_MATERIAL, id: 1 }]);
+  const [listName, setListName]         = useState(prefill?.listName || "");
+  const [materials, setMaterials]       = useState(
+    prefill?.materials?.length
+      ? prefill.materials.map((m, i) => ({ ...DEFAULT_MATERIAL, ...m, id: i + 1 }))
+      : [{ ...DEFAULT_MATERIAL, id: 1 }]
+  );
   const [formStatus, setFormStatus]     = useState("idle");
   const [validationMsg, setValidationMsg] = useState("");
+
+  // Min date = tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split("T")[0];
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -54,6 +65,7 @@ function RequestForm() {
   const validate = () => {
     if (!listName.trim()) { setValidationMsg("Please enter a list name."); return false; }
     if (!requiredDate)    { setValidationMsg("Please select a required date."); return false; }
+    if (requiredDate <= new Date().toISOString().split("T")[0]) { setValidationMsg("Required date must be at least tomorrow."); return false; }
     for (const m of materials) {
       if (!m.name.trim())                    { setValidationMsg("All materials must have a name."); return false; }
       if (!m.quantity || Number(m.quantity) <= 0) { setValidationMsg("All materials must have a valid quantity (> 0)."); return false; }
@@ -119,7 +131,7 @@ function RequestForm() {
                   ))}
                   <div className="form-group">
                     <label><Calendar size={14}/> Required Date</label>
-                    <input type="date" value={requiredDate} onChange={e => setRequiredDate(e.target.value)} required/>
+                    <input type="date" value={requiredDate} min={minDate} onChange={e => setRequiredDate(e.target.value)} required/>
                   </div>
                 </div>
               </section>
@@ -225,12 +237,12 @@ function RequestForm() {
             {formStatus === "success" && (
               <div className="success-popup-overlay">
                 <div className="success-popup">
-                  <button className="popup-close-btn" onClick={() => { setFormStatus("idle"); navigate("/"); }}><X size={24}/></button>
+                  <button className="popup-close-btn" onClick={() => { setFormStatus("idle"); navigate("/customer-dashboard"); }}><X size={24}/></button>
                   <CheckCircle2 size={64} className="success-popup-icon"/>
                   <h2>Success!</h2>
                   <p>Your raw material requirement has been posted successfully.</p>
                   <p className="success-subtitle">Suppliers will contact you soon.</p>
-                  <button className="success-popup-btn" onClick={() => { setFormStatus("idle"); navigate("/"); }}>Return to Home</button>
+                  <button className="success-popup-btn" onClick={() => { setFormStatus("idle"); navigate("/customer-dashboard"); }}>View Supplier Offers</button>
                 </div>
               </div>
             )}

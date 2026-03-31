@@ -50,6 +50,56 @@ function SupplierMarketplace() {
 
   const isUrgent = (date) => (new Date(date) - new Date()) / (1000 * 60 * 60 * 24) <= 2;
 
+  const renderConfirmedCard = (req) => {
+    // Find this supplier's offer for this request
+    const myOffer = myOffers.find(o =>
+      (o.requestId?._id || o.requestId) === req._id ||
+      (o.requestId?._id || o.requestId)?.toString() === req._id?.toString()
+    );
+    const offeredItemNames = myOffer
+      ? new Set(myOffer.items.map(i => i.name.toLowerCase().trim()))
+      : new Set();
+    const coveredNames = (req.coveredItems || []).map(n => n.toLowerCase().trim());
+    const isUrgentReq  = isUrgent(req.requiredDate);
+
+    return (
+      <div className="sm-card" key={req._id}>
+        <div className="sm-card-top">
+          <h3>{req.listName || req.customer.name}</h3>
+          <div className="sm-top-right">
+            {isUrgentReq && <AlertTriangle size={16} color="#f67105"/>}
+            <span className={`sm-confirmed-tag sm-offer-status-${(myOffer?.status || "pending").toLowerCase()}`}>
+              <CheckCircle size={12}/> {myOffer?.status || "Offered"}
+            </span>
+          </div>
+        </div>
+        <div className="sm-card-details">
+          <div className="sm-meta"><User size={14}/> {req.customer.name}</div>
+          <div className="sm-meta"><MapPin size={14}/> {req.customer.location}</div>
+          <div className="sm-meta"><Calendar size={14}/> {new Date(req.requiredDate).toLocaleDateString()}</div>
+        </div>
+        {/* FULL LIST WITH HIGHLIGHTS */}
+        <div className="sm-offer-list">
+          <div className="sm-offer-list-title">📋 Full Request List</div>
+          {req.materials.map((m, i) => {
+            const key      = m.name.toLowerCase().trim();
+            const iMine    = offeredItemNames.has(key);
+            const iOrdered = coveredNames.includes(key);
+            return (
+              <div key={i} className={`sm-offer-item ${iMine ? "sm-item-mine" : ""} ${iOrdered ? "sm-item-ordered" : ""}`}>
+                <span className="sm-item-name">{m.name}</span>
+                <span className="sm-item-qty">{m.quantity} {m.unit}</span>
+                <span className="sm-item-status">
+                  {iOrdered ? "✅ Ordered" : iMine ? "🟢 My Offer" : "⬜ Not Offered"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const renderCard = (req) => {
     // Items not yet covered by paid orders
     const coveredNames   = (req.coveredItems || []).map(n => n.toLowerCase().trim());
@@ -160,7 +210,7 @@ function SupplierMarketplace() {
         ) : (
           confirmedRequests.length === 0
             ? <p style={{padding:"2rem",color:"#555"}}>You haven't submitted any offers yet.</p>
-            : <div className="sm-grid">{confirmedRequests.map(renderCard)}</div>
+            : <div className="sm-grid">{confirmedRequests.map(renderConfirmedCard)}</div>
         )}
       </div>
 
