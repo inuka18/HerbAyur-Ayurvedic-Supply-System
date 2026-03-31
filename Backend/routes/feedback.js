@@ -2,9 +2,10 @@ const router      = require("express").Router();
 const Feedback     = require("../models/Feedback");
 const Notification = require("../models/Notification");
 const User         = require("../models/User");
+const Order        = require("../models/Order");
 const auth         = require("../middleware/auth");
 
-// POST — customer submits feedback (supports both offerId and orderId)
+// POST — customer submits feedback for a specific supplier+order
 router.post("/", auth, async (req, res) => {
   if (req.user.role !== "customer")
     return res.status(403).json({ message: "Only customers can submit feedback." });
@@ -12,12 +13,20 @@ router.post("/", auth, async (req, res) => {
     const { supplierId, offerId, orderId, rating, comment } = req.body;
     if (!supplierId || !rating)
       return res.status(400).json({ message: "supplierId and rating are required." });
-    if (!offerId && !orderId)
+
+    // Resolve orderId from offerId if not provided
+    let resolvedOrderId = orderId;
+    if (!resolvedOrderId && offerId) {
+      const order = await Order.findOne({ offerId });
+      if (order) resolvedOrderId = order._id;
+    }
+
+    if (!resolvedOrderId && !offerId)
       return res.status(400).json({ message: "Either offerId or orderId is required." });
 
     const feedbackData = { supplierId, customerId: req.user.id, rating, comment };
-    if (orderId) feedbackData.orderId = orderId;
-    if (offerId) feedbackData.offerId = offerId;
+    if (resolvedOrderId) feedbackData.orderId = resolvedOrderId;
+    if (offerId)         feedbackData.offerId  = offerId;
 
     const feedback = await Feedback.create(feedbackData);
 
@@ -35,7 +44,7 @@ router.post("/", auth, async (req, res) => {
     res.status(201).json(feedback);
   } catch (err) {
     if (err.code === 11000)
-      return res.status(400).json({ message: "You have already submitted feedback for this order." });
+      return res.status(400).json({ message: "You have already reviewed this supplier for this order." });
     res.status(400).json({ message: err.message });
   }
 });
@@ -69,18 +78,29 @@ router.get("/my-feedbacks", auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// GET — check feedback by offerId
+// GET — check feedback by offerId (resolves to orderId check)
 router.get("/check/:offerId", auth, async (req, res) => {
   try {
-    const existing = await Feedback.findOne({ offerId: req.params.offerId, customerId: req.user.id });
+    // Find the order for this offer
+    const order = await Order.findOne({ offerId: req.params.offerId });
+    if (!order) return res.json({ given: false });
+    // Check if this customer already reviewed this supplier for this order
+    const existing = await Feedback.findOne({
+      orderId:    order._id,
+      customerId: req.user.id,
+      supplierId: order.supplierId,
+    });
     res.json({ given: !!existing, feedback: existing });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// GET — check feedback by orderId
+// GET — check feedback by orderId + supplierId
 router.get("/check-order/:orderId", auth, async (req, res) => {
   try {
-    const existing = await Feedback.findOne({ orderId: req.params.orderId, customerId: req.user.id });
+    const { supplierId } = req.query;
+    const query = { orderId: req.params.orderId, customerId: req.user.id };
+    if (supplierId) query.supplierId = supplierId;
+    const existing = await Feedback.findOne(query);
     res.json({ given: !!existing, feedback: existing });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });

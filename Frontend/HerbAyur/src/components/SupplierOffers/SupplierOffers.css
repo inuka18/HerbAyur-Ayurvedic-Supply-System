@@ -111,12 +111,53 @@ animation:moveGradient 6s linear infinite;
 }
 
 
-.supplier-card.Accepted{
-border:2px solid #2e7d32;
+.supplier-card.Accepted {
+  border: 2px solid #2e7d32;
 }
 
-.supplier-card.Rejected{
-opacity:0.5;
+.supplier-card.Rejected {
+  border: 1.5px solid #fca5a5;
+  background: white;
+  pointer-events: none;
+}
+
+.supplier-card.Rejected::before {
+  background: #ef4444;
+  animation: none;
+}
+
+.supplier-card.Rejected .profile-btn {
+  pointer-events: all;
+}
+
+.supplier-card.Rejected .item-row {
+  background: #fafafa;
+}
+
+/* REJECTION BANNER INSIDE CARD */
+.offer-rejected-banner {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.offer-rejected-banner .rej-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: 4px;
+}
+
+.offer-rejected-banner p {
+  font-size: 0.82rem;
+  color: #7f1d1d;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .supplier-header{
@@ -657,6 +698,43 @@ width:fit-content;
 
 .banner-chip-warn { background: #fde68a; color: #78350f; }
 .banner-chip-ok   { background: #bbf7d0; color: #14532d; }
+
+/* REMAINING ITEMS SUBMIT BANNER */
+.remaining-submit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.remaining-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+  box-shadow: 0 3px 10px rgba(217,119,6,0.3);
+}
+
+.remaining-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(217,119,6,0.4);
+}
 
 /* MY ORDERS — grouped by list */
 .order-list-group {

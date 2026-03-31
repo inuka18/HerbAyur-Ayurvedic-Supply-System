@@ -12,8 +12,8 @@ const feedbackSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// one feedback per order per customer
-feedbackSchema.index({ orderId: 1, customerId: 1 }, { unique: true, sparse: true });
-feedbackSchema.index({ offerId: 1, customerId: 1 }, { unique: true, sparse: true });
+// One feedback per supplier per order per customer
+// This allows a customer to review each supplier separately for each order
+feedbackSchema.index({ supplierId: 1, orderId: 1, customerId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("Feedback", feedbackSchema);

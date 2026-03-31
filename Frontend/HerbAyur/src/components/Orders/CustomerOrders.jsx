@@ -128,8 +128,9 @@ export default function CustomerOrders() {
 
       const fbMap = {};
       await Promise.all(
-        list.filter(o => o.orderStatus === "Delivered" && o.customerConfirmed).map(async (o) => {
-          const d = await fetch(`${API_BASE}/feedback/check-order/${o._id}`, {
+        list.filter(o => o.orderStatus === "Delivered").map(async (o) => {
+          const supplierId = o.supplierId?._id || o.supplierId;
+          const d = await fetch(`${API_BASE}/feedback/check-order/${o._id}?supplierId=${supplierId}`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then(r => r.json());
           fbMap[o._id] = d.given;
@@ -225,7 +226,7 @@ export default function CustomerOrders() {
           </div>
         )}
 
-        {isDelivered && isConfirmed && !hasFeedback && (
+        {isDelivered && !hasFeedback && (
           <div className="co-feedback-banner">
             <span>⭐ Rate your experience with <strong>{o.supplierName}</strong></span>
             <button className="co-feedback-btn" onClick={() => openFeedback(o)}>
@@ -234,7 +235,7 @@ export default function CustomerOrders() {
           </div>
         )}
 
-        {isDelivered && isConfirmed && hasFeedback && (
+        {isDelivered && hasFeedback && (
           <div className="co-reviewed-banner">✅ You reviewed this order</div>
         )}
 
