@@ -2,12 +2,14 @@ import { useState } from "react";
 import SupplierOffers from "../SupplierOffers/SupplierOffers";
 import CustomerOrders from "../Orders/CustomerOrders";
 import { CustomerReport } from "../Reports/Reports";
+import { CustomerPayment } from "../PaymentDashboard/PaymentDashboard";
 import "../SupplierDashboard/SupplierDashboard.css";
 
 const TABS = [
-  { id: "offers",  label: "🤝 Supplier Offers" },
-  { id: "orders",  label: "📦 My Orders" },
-  { id: "reports", label: "📊 Reports" },
+  { id: "offers",   label: "🤝 Supplier Offers" },
+  { id: "orders",   label: "📦 My Orders" },
+  { id: "payments", label: "💳 Payments" },
+  { id: "reports",  label: "📊 Reports" },
 ];
 
 function CustomerDashboard() {
@@ -26,20 +28,17 @@ function CustomerDashboard() {
         </div>
         <div className="sd-tabs">
           {TABS.map(t => (
-            <button
-              key={t.id}
-              className={tab === t.id ? "sd-tab active" : "sd-tab"}
-              onClick={() => setTab(t.id)}
-            >
+            <button key={t.id} className={tab === t.id ? "sd-tab active" : "sd-tab"} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
         </div>
       </div>
 
-      {tab === "offers"  && <SupplierOffers />}
-      {tab === "orders"  && <CustomerOrders />}
-      {tab === "reports" && <CustomerReport />}
+      {tab === "offers"   && <SupplierOffers />}
+      {tab === "orders"   && <CustomerOrders />}
+      {tab === "payments" && <CustomerPayment />}
+      {tab === "reports"  && <CustomerReport />}
     </div>
   );
 }
