@@ -167,24 +167,38 @@ router.patch("/profile", auth, upload.single("certification"), async (req, res) 
     const { firstName, lastName, phone, address, companyName } = req.body;
 
     if (req.user.role === "supplier") {
-      // Store as pending changes — admin must approve
-      const changes = { firstName, lastName, phone, address, submittedAt: new Date() };
-      if (companyName) changes.companyName = companyName;
-      if (req.file)    changes.certificationUrl = `/uploads/${req.file.filename}`;
+      const needsApproval = companyName || req.file;
 
-      const user = await User.findByIdAndUpdate(
-        req.user.id,
-        { pendingChanges: changes },
-        { new: true }
-      ).select("-password");
+      if (companyName && !req.file) {
+        return res.status(400).json({ message: "A new certification is required when changing the company name." });
+      }
+      // Apply basic fields directly
+      const directUpdates = { firstName, lastName, phone, address };
 
-      const admin = await User.findOne({ role: "admin" });
-      if (admin) await Notification.create({
-        recipient: admin._id, recipientRole: "admin",
-        message: `Supplier ${user.firstName} ${user.lastName} submitted profile changes. Review and approve or reject.`,
-        type: "new_supplier", relatedId: user._id,
-      });
-      return res.json({ ...user.toObject(), _pendingSubmitted: true });
+      if (needsApproval) {
+        // Only companyName / certification go into pendingChanges
+        const changes = { submittedAt: new Date() };
+        if (companyName) changes.companyName = companyName;
+        if (req.file)    changes.certificationUrl = `/uploads/${req.file.filename}`;
+
+        const user = await User.findByIdAndUpdate(
+          req.user.id,
+          { ...directUpdates, pendingChanges: changes },
+          { new: true }
+        ).select("-password");
+
+        const admin = await User.findOne({ role: "admin" });
+        if (admin) await Notification.create({
+          recipient: admin._id, recipientRole: "admin",
+          message: `Supplier ${user.firstName} ${user.lastName} submitted company/certification changes. Review and approve or reject.`,
+          type: "new_supplier", relatedId: user._id,
+        });
+        return res.json({ ...user.toObject(), _pendingSubmitted: true });
+      }
+
+      // No company/cert change — apply everything directly
+      const user = await User.findByIdAndUpdate(req.user.id, directUpdates, { new: true }).select("-password");
+      return res.json(user);
     }
 
     // Customers & Admin — apply directly
@@ -207,10 +221,6 @@ router.post("/profile-changes/:supplierId/:action", auth, async (req, res) => {
     if (action === "approve") {
       const c = supplier.pendingChanges;
       update = {
-        firstName:        c.firstName        || supplier.firstName,
-        lastName:         c.lastName         || supplier.lastName,
-        phone:            c.phone            || supplier.phone,
-        address:          c.address          || supplier.address,
         companyName:      c.companyName      || supplier.companyName,
         certificationUrl: c.certificationUrl || supplier.certificationUrl,
         pendingChanges:   {},
@@ -231,6 +241,40 @@ router.post("/profile-changes/:supplierId/:action", auth, async (req, res) => {
     });
 
     res.json({ message: `Changes ${action}d` });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// POST — admin sends warning to supplier
+router.post("/warn/:userId", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+  try {
+    const { message } = req.body;
+    if (!message?.trim()) return res.status(400).json({ message: "Warning message is required." });
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    user.warnings = user.warnings || [];
+    user.warnings.push({ message: message.trim(), issuedAt: new Date() });
+    await user.save();
+    await Notification.create({
+      recipient:     user._id,
+      recipientRole: user.role,
+      message:       `⚠️ Admin Warning: ${message.trim()}`,
+      type:          "new_supplier",
+      relatedId:     user._id,
+    });
+    res.json({ message: "Warning sent.", warnings: user.warnings });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// DELETE — admin removes a user from the system
+router.delete("/remove/:userId", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role === "admin") return res.status(403).json({ message: "Cannot remove admin." });
+    await User.findByIdAndDelete(req.params.userId);
+    res.json({ message: `${user.firstName} ${user.lastName} removed from system.` });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

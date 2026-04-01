@@ -71,18 +71,37 @@ router.patch("/:id/accept", auth, async (req, res) => {
     if (!offer) return res.status(404).json({ message: "Offer not found" });
 
     if (offer.supplyType === "Whole") {
-      // Reject all other offers for same request
+      // Reject all other offers for same request and notify each supplier
+      const others = await Offer.find({ requestId: offer.requestId._id, _id: { $ne: offer._id }, status: { $ne: "Rejected" } });
       await Offer.updateMany(
         { requestId: offer.requestId._id, _id: { $ne: offer._id } },
         { status: "Rejected" }
       );
+      for (const other of others) {
+        await Notification.create({
+          recipient:     other.supplierId,
+          recipientRole: "supplier",
+          message:       `Your offer for "${offer.requestId.listName || "a request"}" was rejected because the customer accepted another supplier's offer.`,
+          type:          "offer_accepted",
+          relatedId:     other._id,
+        });
+      }
     } else {
-      // Reject offers that overlap on same items
+      // Reject offers that overlap on same items and notify each
       const acceptedItemNames = offer.items.map(i => i.name);
       const siblings = await Offer.find({ requestId: offer.requestId._id, _id: { $ne: offer._id }, status: "Pending" });
       for (const sibling of siblings) {
         const overlap = sibling.items.some(i => acceptedItemNames.includes(i.name));
-        if (overlap) await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+        if (overlap) {
+          await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+          await Notification.create({
+            recipient:     sibling.supplierId,
+            recipientRole: "supplier",
+            message:       `Your offer for "${offer.requestId.listName || "a request"}" was rejected because the customer accepted another supplier for the same items.`,
+            type:          "offer_accepted",
+            relatedId:     sibling._id,
+          });
+        }
       }
     }
 

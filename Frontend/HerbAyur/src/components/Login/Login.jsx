@@ -31,7 +31,7 @@ function Login() {
 
       if (data.user.role === "admin")         navigate("/admin");
       else if (data.user.role === "supplier")  navigate("/supplier-dashboard");
-      else                                     navigate("/customer-dashboard");
+      else                                     navigate("/");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

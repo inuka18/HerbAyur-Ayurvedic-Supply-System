@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Printer, X, CheckCircle2, Star, MessageSquare } from "lucide-react";
+import { Printer, X, CheckCircle2, Star, MessageSquare, ShoppingBag, AlertCircle, List, Filter, Calendar } from "lucide-react";
 import API_BASE from "../../api";
 import "./Orders.css";
+import "../SupplierMarketplace/SupplierMarketplace.css";
 
 const STATUS_COLORS = {
   Confirmed:  { bg: "#dbeafe", color: "#1d4ed8" },
@@ -94,36 +95,42 @@ function ReceiptModal({ order, onClose }) {
 }
 
 export default function CustomerOrders() {
-  const [orders, setOrders]           = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [receipt, setReceipt]         = useState(null);
-  const [feedbackMap, setFeedbackMap] = useState({}); // orderId -> true/false
+  const [orders, setOrders]             = useState([]);
+  const [requests, setRequests]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [receipt, setReceipt]           = useState(null);
+  const [feedbackMap, setFeedbackMap]   = useState({});
   const [confirmingId, setConfirmingId] = useState(null);
+  const [fbModal, setFbModal]           = useState(null);
+  const [fbRating, setFbRating]         = useState(0);
+  const [fbComment, setFbComment]       = useState("");
+  const [fbError, setFbError]           = useState("");
+  const [fbSuccess, setFbSuccess]       = useState("");
+  const [fbLoading, setFbLoading]       = useState(false);
 
-  // Feedback modal state
-  const [fbModal, setFbModal]   = useState(null); // { order }
-  const [fbRating, setFbRating] = useState(0);
-  const [fbComment, setFbComment] = useState("");
-  const [fbError, setFbError]   = useState("");
-  const [fbSuccess, setFbSuccess] = useState("");
-  const [fbLoading, setFbLoading] = useState(false);
+  const [search, setSearch]             = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterDate, setFilterDate]     = useState("");
 
   const token = localStorage.getItem("token");
 
-  const fetchOrders = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await fetch(`${API_BASE}/orders/my-orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json());
-      const list = Array.isArray(data) ? data : [];
-      setOrders(list);
+      const [ordersData, requestsData] = await Promise.all([
+        fetch(`${API_BASE}/orders/my-orders`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch(`${API_BASE}/requests`,          { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      ]);
 
-      // Check feedback only for delivered+confirmed orders
+      const list = Array.isArray(ordersData) ? ordersData : [];
+      setOrders(list);
+      setRequests(Array.isArray(requestsData) ? requestsData : []);
+
       const fbMap = {};
       await Promise.all(
-        list.filter(o => o.orderStatus === "Delivered" && o.customerConfirmed).map(async (o) => {
-          const d = await fetch(`${API_BASE}/feedback/check-order/${o._id}`, {
+        list.filter(o => o.orderStatus === "Delivered").map(async (o) => {
+          const supplierId = o.supplierId?._id || o.supplierId;
+          const d = await fetch(`${API_BASE}/feedback/check-order/${o._id}?supplierId=${supplierId}`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then(r => r.json());
           fbMap[o._id] = d.given;
@@ -134,7 +141,7 @@ export default function CustomerOrders() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const confirmDelivery = async (orderId) => {
     setConfirmingId(orderId);
@@ -144,8 +151,7 @@ export default function CustomerOrders() {
       });
       const data = await res.json();
       if (!res.ok) { alert(data.message); return; }
-      await fetchOrders();
-      // Open feedback modal immediately after confirming
+      await fetchData();
       const confirmed = orders.find(o => o._id === orderId);
       if (confirmed) openFeedback(confirmed);
     } catch {}
@@ -174,103 +180,218 @@ export default function CustomerOrders() {
       const data = await res.json();
       if (!res.ok) return setFbError(data.message);
       setFbSuccess("Thank you for your feedback! 🌿");
-      setTimeout(() => { setFbModal(null); fetchOrders(); }, 1800);
+      setTimeout(() => { setFbModal(null); fetchData(); }, 1800);
     } catch { setFbError("Something went wrong."); }
     finally { setFbLoading(false); }
   };
 
+  const renderOrderCard = (o) => {
+    const sc          = STATUS_COLORS[o.orderStatus] || STATUS_COLORS.Confirmed;
+    const isDelivered = o.orderStatus === "Delivered";
+    const isConfirmed = o.customerConfirmed;
+    const hasFeedback = feedbackMap[o._id];
+
+    return (
+      <div key={o._id} className="ord-card">
+        <div className="ord-card-top">
+          <div>
+            <div className="ord-receipt-no">#{o.receiptNo}</div>
+            <div className="ord-supplier">🏭 {o.supplierName}</div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <span className="ord-status-badge" style={{ background: sc.bg, color: sc.color }}>
+              {o.orderStatus}{isConfirmed ? " ✅" : ""}
+            </span>
+            <div className="ord-date">{new Date(o.createdAt).toLocaleDateString()}</div>
+          </div>
+        </div>
+
+        <div className="ord-items">
+          {o.items.map((item, i) => (
+            <div key={i} className="ord-item-row">
+              <span>{item.name}</span>
+              <span>{item.supplyQty} {item.unit}</span>
+              <span>Rs {(item.price * item.supplyQty).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+
+        {isDelivered && !isConfirmed && (
+          <div className="co-confirm-banner">
+            <span>📬 Supplier marked this as Delivered. Did you receive your order?</span>
+            <button className="co-confirm-btn" onClick={() => confirmDelivery(o._id)} disabled={confirmingId === o._id}>
+              <CheckCircle2 size={15}/>
+              {confirmingId === o._id ? "Confirming..." : "Confirm Receipt"}
+            </button>
+          </div>
+        )}
+
+        {isDelivered && !hasFeedback && (
+          <div className="co-feedback-banner">
+            <span>⭐ Rate your experience with <strong>{o.supplierName}</strong></span>
+            <button className="co-feedback-btn" onClick={() => openFeedback(o)}>
+              <MessageSquare size={14}/> Write Review
+            </button>
+          </div>
+        )}
+
+        {isDelivered && hasFeedback && (
+          <div className="co-reviewed-banner">✅ You reviewed this order</div>
+        )}
+
+        <div className="ord-card-footer">
+          <div className="ord-payment-info">
+            <span className="ord-method">{o.paymentMethod}</span>
+            <span className="ord-paid-badge">✅ {o.paymentStatus}</span>
+          </div>
+          <div className="ord-total">Rs {o.totalAmount.toLocaleString()}</div>
+          <button className="ord-receipt-btn" onClick={() => setReceipt(o)}>
+            <Printer size={14}/> Receipt
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return <div className="ord-page"><p className="ord-loading">Loading orders...</p></div>;
+
+  // Group orders by listName (after filtering)
+  const filteredOrders = orders.filter(o => {
+    const matchStatus = filterStatus === "All" || o.orderStatus === filterStatus;
+    const q = search.toLowerCase();
+    const matchSearch = !q || o.listName?.toLowerCase().includes(q) || o.supplierName?.toLowerCase().includes(q) || o.receiptNo?.toLowerCase().includes(q);
+    const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+    const matchDate = !filterDate || d === filterDate;
+    return matchStatus && matchSearch && matchDate;
+  });
+
+  const groups = {};
+  filteredOrders.forEach(o => {
+    const key = o.listName || "Other Orders";
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(o);
+  });
 
   return (
     <div className="ord-page">
       <div className="ord-header">
         <h2>📦 My Orders & Payments</h2>
-        <span className="ord-count">{orders.length} orders</span>
+        <span className="ord-count">{orders.length} order{orders.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {orders.length === 0 ? (
+      {/* STATS BAR */}
+      <div className="sm-stats-bar">
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.length}</span>
+          <span className="sm-stat-label">Total Orders</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Confirmed").length}</span>
+          <span className="sm-stat-label">Confirmed</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Processing").length}</span>
+          <span className="sm-stat-label">Processing</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">{orders.filter(o => o.orderStatus === "Delivered").length}</span>
+          <span className="sm-stat-label">Delivered</span>
+        </div>
+        <div className="sm-stat-divider"/>
+        <div className="sm-stat">
+          <span className="sm-stat-num">Rs {orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}</span>
+          <span className="sm-stat-label">Total Spent</span>
+        </div>
+      </div>
+
+      {/* FILTER BAR */}
+      <div className="sm-controls">
+        <div className="sm-filter-box">
+          <Filter size={16}/>
+          <input placeholder="Search list, supplier or receipt..." value={search} onChange={e => setSearch(e.target.value)} style={{ minWidth:160 }}/>
+        </div>
+        <div className="sm-filter-box">
+          <Calendar size={15}/>
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} title="Filter by order date"/>
+        </div>
+        <div className="sm-sort-box">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <option value="All">All Statuses</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Processing">Processing</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+      </div>
+
+      {filteredOrders.length === 0 ? (
         <div className="ord-empty">No orders yet. Accept a supplier offer to place an order.</div>
       ) : (
-        <div className="ord-list">
-          {orders.map(o => {
-            const sc = STATUS_COLORS[o.orderStatus] || STATUS_COLORS.Confirmed;
-            const isDelivered  = o.orderStatus === "Delivered";
-            const isConfirmed  = o.customerConfirmed;
-            const hasFeedback  = feedbackMap[o._id];
+        Object.entries(groups).map(([listName, groupOrders]) => {
+          // Find the matching request for this listName
+          const req = requests.find(r => r.listName === listName);
+          const totalItems    = req ? req.materials.length : null;
+          const coveredNames  = req ? (req.coveredItems || []).map(n => n.toLowerCase().trim()) : [];
+          const orderedCount  = coveredNames.length;
+          const isComplete    = req ? req.fullyCompleted : false;
+          const remaining     = req ? req.materials.filter(m => !coveredNames.includes(m.name.toLowerCase().trim())) : [];
+          const pct           = totalItems ? Math.round((orderedCount / totalItems) * 100) : null;
 
-            return (
-              <div key={o._id} className="ord-card">
-                <div className="ord-card-top">
-                  <div>
-                    <div className="ord-receipt-no">#{o.receiptNo}</div>
-                    {o.listName && <div className="ord-listname">📋 {o.listName}</div>}
-                    <div className="ord-supplier">🏭 {o.supplierName}</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <span className="ord-status-badge" style={{ background: sc.bg, color: sc.color }}>
-                      {o.orderStatus}{isConfirmed ? " ✅" : ""}
-                    </span>
-                    <div className="ord-date">{new Date(o.createdAt).toLocaleDateString()}</div>
-                  </div>
-                </div>
-
-                <div className="ord-items">
-                  {o.items.map((item, i) => (
-                    <div key={i} className="ord-item-row">
-                      <span>{item.name}</span>
-                      <span>{item.supplyQty} {item.unit}</span>
-                      <span>Rs {(item.price * item.supplyQty).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Confirm delivery banner */}
-                {isDelivered && !isConfirmed && (
-                  <div className="co-confirm-banner">
-                    <span>📬 Supplier marked this as Delivered. Did you receive your order?</span>
-                    <button
-                      className="co-confirm-btn"
-                      onClick={() => confirmDelivery(o._id)}
-                      disabled={confirmingId === o._id}>
-                      <CheckCircle2 size={15}/>
-                      {confirmingId === o._id ? "Confirming..." : "Confirm Receipt"}
-                    </button>
-                  </div>
-                )}
-
-                {/* Feedback — only after Delivered + customer confirmed */}
-                {isDelivered && isConfirmed && !hasFeedback && (
-                  <div className="co-feedback-banner">
-                    <span>⭐ Rate your experience with <strong>{o.supplierName}</strong></span>
-                    <button className="co-feedback-btn" onClick={() => openFeedback(o)}>
-                      <MessageSquare size={14}/> Write Review
-                    </button>
-                  </div>
-                )}
-
-                {isDelivered && isConfirmed && hasFeedback && (
-                  <div className="co-reviewed-banner">✅ You reviewed this order</div>
-                )}
-
-                <div className="ord-card-footer">
-                  <div className="ord-payment-info">
-                    <span className="ord-method">{o.paymentMethod}</span>
-                    <span className="ord-paid-badge">✅ {o.paymentStatus}</span>
-                  </div>
-                  <div className="ord-total">Total: Rs {o.totalAmount.toLocaleString()}</div>
-                  <button className="ord-receipt-btn" onClick={() => setReceipt(o)}>
-                    <Printer size={14}/> Receipt
-                  </button>
-                </div>
+          return (
+            <div key={listName} className="ord-group">
+              <div className="ord-group-header">
+                <ShoppingBag size={16}/>
+                <span className="ord-group-name">{listName}</span>
+                <span className="ord-group-badge">{groupOrders.length} order{groupOrders.length > 1 ? "s" : ""}</span>
+                {isComplete
+                  ? <span className="ord-group-complete"><CheckCircle2 size={13}/> Fully Completed</span>
+                  : <span className="ord-group-total">Rs {groupOrders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}</span>
+                }
               </div>
-            );
-          })}
-        </div>
+
+              {/* Progress bar */}
+              {totalItems !== null && (
+                <div className="ord-progress-wrap">
+                  <div className="ord-progress-bar">
+                    <div className="ord-progress-fill" style={{ width: `${pct}%`, background: isComplete ? "#22c55e" : "#0ea5e9" }}/>
+                  </div>
+                  <span className="ord-progress-label">
+                    {orderedCount}/{totalItems} items ordered ({pct}%)
+                  </span>
+                </div>
+              )}
+
+              {/* Remaining items that still need to be accepted & paid */}
+              {!isComplete && remaining.length > 0 && (
+                <div className="ord-remaining-banner">
+                  <AlertCircle size={15}/>
+                  <div>
+                    <strong>{remaining.length} item{remaining.length > 1 ? "s" : ""} still need to be ordered:</strong>
+                    <div className="ord-remaining-items">
+                      {remaining.map((m, i) => (
+                        <span key={i} className="ord-remaining-chip">
+                          <List size={11}/> {m.name} — {m.quantity} {m.unit}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="ord-remaining-hint">Go to <strong>Supplier Offers</strong> tab to accept &amp; pay for these items.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="ord-list">
+                {groupOrders.map(o => renderOrderCard(o))}
+              </div>
+            </div>
+          );
+        })
       )}
 
       {receipt && <ReceiptModal order={receipt} onClose={() => setReceipt(null)}/>}
 
-      {/* FEEDBACK MODAL */}
       {fbModal && (
         <div className="ord-overlay">
           <div className="co-fb-modal">
@@ -278,10 +399,8 @@ export default function CustomerOrders() {
               <h3><MessageSquare size={18}/> Rate Your Order</h3>
               <button className="ord-close-x" onClick={() => setFbModal(null)}><X size={16}/></button>
             </div>
-
             <p className="co-fb-supplier">🏭 {fbModal.supplierName}</p>
             {fbModal.listName && <p className="co-fb-list">📋 {fbModal.listName}</p>}
-
             <div className="co-fb-section">
               <label>Your Rating</label>
               <StarRating value={fbRating} onChange={setFbRating}/>
@@ -291,21 +410,13 @@ export default function CustomerOrders() {
                 </span>
               )}
             </div>
-
             <div className="co-fb-section">
               <label>Comment <span style={{color:"#9ca3af",fontWeight:400}}>(optional)</span></label>
-              <textarea
-                className="co-fb-textarea"
-                placeholder="Share your experience with this supplier..."
-                value={fbComment}
-                onChange={e => setFbComment(e.target.value)}
-                rows={3}
-              />
+              <textarea className="co-fb-textarea" placeholder="Share your experience with this supplier..."
+                value={fbComment} onChange={e => setFbComment(e.target.value)} rows={3}/>
             </div>
-
             {fbError   && <div className="co-fb-error">⚠ {fbError}</div>}
             {fbSuccess && <div className="co-fb-success">{fbSuccess}</div>}
-
             <div className="co-fb-actions">
               <button className="co-fb-submit" onClick={submitFeedback} disabled={fbLoading || !fbRating}>
                 {fbLoading ? "Submitting..." : "Submit Review"}
