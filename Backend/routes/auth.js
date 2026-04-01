@@ -234,6 +234,40 @@ router.post("/profile-changes/:supplierId/:action", auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// POST — admin sends warning to supplier
+router.post("/warn/:userId", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+  try {
+    const { message } = req.body;
+    if (!message?.trim()) return res.status(400).json({ message: "Warning message is required." });
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    user.warnings = user.warnings || [];
+    user.warnings.push({ message: message.trim(), issuedAt: new Date() });
+    await user.save();
+    await Notification.create({
+      recipient:     user._id,
+      recipientRole: user.role,
+      message:       `⚠️ Admin Warning: ${message.trim()}`,
+      type:          "new_supplier",
+      relatedId:     user._id,
+    });
+    res.json({ message: "Warning sent.", warnings: user.warnings });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// DELETE — admin removes a user from the system
+router.delete("/remove/:userId", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role === "admin") return res.status(403).json({ message: "Cannot remove admin." });
+    await User.findByIdAndDelete(req.params.userId);
+    res.json({ message: `${user.firstName} ${user.lastName} removed from system.` });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // DELETE own account
 router.delete("/profile", auth, async (req, res) => {
   try {

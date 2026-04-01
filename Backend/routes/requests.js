@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Request = require("../models/Request");
+const Offer   = require("../models/Offer");
 const Notification = require("../models/Notification");
 const auth = require("../middleware/auth");
 
@@ -53,10 +54,40 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
-// DELETE request
-router.delete("/:id", async (req, res) => {
-  await Request.findByIdAndDelete(req.params.id);
-  res.json({ message: "Deleted" });
+// DELETE request — customer can cancel only if no orders placed
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+
+    // Only the owner can cancel
+    if (String(request.customerId) !== String(req.user.id) && req.user.role !== "admin")
+      return res.status(403).json({ message: "Not authorised" });
+
+    // Block cancellation if any orders have been placed for this request
+    if ((request.coveredItems || []).length > 0)
+      return res.status(400).json({ message: "Cannot cancel — orders have already been placed for some items in this request." });
+
+    await Request.findByIdAndDelete(req.params.id);
+
+    // Notify all suppliers who submitted offers for this request
+    const offers = await Offer.find({ requestId: req.params.id });
+    const notifiedSuppliers = new Set();
+    for (const offer of offers) {
+      const sid = String(offer.supplierId);
+      if (notifiedSuppliers.has(sid)) continue;
+      notifiedSuppliers.add(sid);
+      await Notification.create({
+        recipient:     offer.supplierId,
+        recipientRole: "supplier",
+        message:       `❌ The customer has cancelled the request "${request.listName || "a requirement list"}". Your offer for this request is no longer active.`,
+        type:          "request_update",
+        relatedId:     offer._id,
+      });
+    }
+
+    res.json({ message: "Request cancelled successfully." });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 module.exports = router;

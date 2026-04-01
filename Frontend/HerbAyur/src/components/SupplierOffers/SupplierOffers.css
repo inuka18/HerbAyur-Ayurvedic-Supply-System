@@ -736,6 +736,36 @@ width:fit-content;
   box-shadow: 0 6px 16px rgba(217,119,6,0.4);
 }
 
+/* CANCEL REQUEST BUTTON */
+.cancel-request-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+  padding: 7px 14px;
+  border-radius: 25px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.cancel-request-btn:hover:not(:disabled) {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+}
+
+.cancel-request-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* MY ORDERS — grouped by list */
 .order-list-group {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);

@@ -49,6 +49,10 @@ export default function AdminDashboard() {
   const [supSearch, setSupSearch]     = useState("");
   const [supStatus, setSupStatus]     = useState("All");
 
+  const [warnModal, setWarnModal]   = useState(null); // { supplierId, name }
+  const [warnMsg, setWarnMsg]       = useState("");
+  const [warnLoading, setWarnLoading] = useState(false);
+
   const fetchOverview = async () => {
     setLoading(true);
     try {
@@ -101,6 +105,29 @@ export default function AdminDashboard() {
     else if (tab==="messages")  fetchMessages();
     else if (tab==="orders")    fetchOrders();
   }, [tab]);
+
+  const sendWarning = async () => {
+    if (!warnMsg.trim()) return;
+    setWarnLoading(true);
+    await fetch(`${API_BASE}/auth/warn/${warnModal.supplierId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+      body: JSON.stringify({ message: warnMsg }),
+    });
+    setWarnLoading(false);
+    setWarnModal(null);
+    setWarnMsg("");
+    fetchSuppliers();
+  };
+
+  const removeUser = async (userId, name) => {
+    if (!window.confirm(`Remove "${name}" from the system? This cannot be undone.`)) return;
+    await fetch(`${API_BASE}/auth/remove/${userId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token()}` },
+    });
+    fetchSuppliers();
+  };
 
   const supplierAction = async (supplierId, action) => {
     await fetch(`${API_BASE}/notifications/supplier-action`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token()}`},body:JSON.stringify({supplierId,action})});
@@ -290,7 +317,7 @@ export default function AdminDashboard() {
                       })
                       .map((s,i)=>(
                       <tr key={s._id}>
-                        <td>{i+1}</td><td>{s.firstName} {s.lastName}{s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}</td><td>{s.companyName||"—"}</td>
+                        <td>{i+1}</td><td>{s.firstName} {s.lastName}{s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}{s.warnings?.length > 0 && <span className="warn-count-tag">⚠️ {s.warnings.length} warning{s.warnings.length > 1 ? "s" : ""}</span>}</td><td>{s.companyName||"—"}</td>
                         <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
                         <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
                         <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
@@ -298,6 +325,8 @@ export default function AdminDashboard() {
                         <td className="action-btns">
                           {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
                           {s.status!=="pending"&&<span style={{color:"#9ca3af",fontSize:"0.8rem"}}>—</span>}
+                          <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
+                          <button className="btn-remove" onClick={() => removeUser(s._id, `${s.firstName} ${s.lastName}`)}>🗑 Remove</button>
                         </td>
                       </tr>
                     ))}
@@ -412,6 +441,30 @@ export default function AdminDashboard() {
             </div>
           )
         ) : <AdminReport />
+      )}
+
+      {/* WARNING MODAL */}
+      {warnModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:"1rem" }}>
+          <div style={{ background:"white", borderRadius:16, padding:"2rem", width:"100%", maxWidth:460, boxShadow:"0 20px 50px rgba(0,0,0,0.2)" }}>
+            <h3 style={{ color:"#d97706", marginBottom:"0.5rem", display:"flex", alignItems:"center", gap:8, margin:"0 0 0.5rem" }}>⚠️ Send Warning</h3>
+            <p style={{ color:"#6b7280", fontSize:"0.85rem", marginBottom:"1rem" }}>To: <strong>{warnModal.name}</strong></p>
+            <textarea
+              rows={4}
+              placeholder="Enter warning message for this supplier..."
+              value={warnMsg}
+              onChange={e => setWarnMsg(e.target.value)}
+              style={{ width:"100%", padding:"0.7rem", border:"1.5px solid #fde68a", borderRadius:10, fontSize:"0.9rem", outline:"none", resize:"none", boxSizing:"border-box", fontFamily:"inherit", background:"#fffbeb" }}
+            />
+            <div style={{ display:"flex", gap:"0.6rem", justifyContent:"flex-end", marginTop:"1rem" }}>
+              <button onClick={() => { setWarnModal(null); setWarnMsg(""); }} style={{ background:"#f3f4f6", border:"none", padding:"0.6rem 1.2rem", borderRadius:8, cursor:"pointer", fontSize:"0.9rem" }}>Cancel</button>
+              <button onClick={sendWarning} disabled={warnLoading || !warnMsg.trim()}
+                style={{ background: warnMsg.trim() ? "linear-gradient(135deg,#d97706,#f59e0b)" : "#e5e7eb", color: warnMsg.trim() ? "white" : "#9ca3af", border:"none", padding:"0.6rem 1.4rem", borderRadius:8, cursor: warnMsg.trim() ? "pointer" : "not-allowed", fontWeight:700, fontSize:"0.9rem" }}>
+                {warnLoading ? "Sending..." : "⚠️ Send Warning"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

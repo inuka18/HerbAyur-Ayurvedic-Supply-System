@@ -4,12 +4,14 @@ import Inventory from "../Inventory/Inventory";
 import SupplierOrders from "../Orders/SupplierOrders";
 import SupplierFeedbacks from "../Orders/SupplierFeedbacks";
 import { SupplierReport } from "../Reports/Reports";
+import { SupplierPayment } from "../PaymentDashboard/PaymentDashboard";
 import "./SupplierDashboard.css";
 
 const TABS = [
   { id: "marketplace", label: "🛒 Marketplace" },
   { id: "inventory",   label: "📦 My Inventory" },
   { id: "orders",      label: "💰 Revenue & Orders" },
+  { id: "payments",    label: "💳 Payments" },
   { id: "feedbacks",   label: "⭐ Feedbacks" },
   { id: "reports",     label: "📊 Reports" },
 ];
@@ -30,11 +32,7 @@ function SupplierDashboard() {
         </div>
         <div className="sd-tabs">
           {TABS.map(t => (
-            <button
-              key={t.id}
-              className={tab === t.id ? "sd-tab active" : "sd-tab"}
-              onClick={() => setTab(t.id)}
-            >
+            <button key={t.id} className={tab === t.id ? "sd-tab active" : "sd-tab"} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
@@ -44,6 +42,7 @@ function SupplierDashboard() {
       {tab === "marketplace" && <SupplierMarketplace />}
       {tab === "inventory"   && <Inventory />}
       {tab === "orders"      && <SupplierOrders />}
+      {tab === "payments"    && <SupplierPayment />}
       {tab === "feedbacks"   && <SupplierFeedbacks />}
       {tab === "reports"     && <SupplierReport />}
     </div>

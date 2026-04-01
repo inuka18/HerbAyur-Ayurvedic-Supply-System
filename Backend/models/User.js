@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema(
       certificationUrl: { type: String },
       submittedAt:      { type: Date },
     },
+    warnings: [
+      {
+        message:   { type: String, required: true },
+        issuedAt:  { type: Date, default: Date.now },
+      }
+    ],
   },
   { timestamps: true }
 );

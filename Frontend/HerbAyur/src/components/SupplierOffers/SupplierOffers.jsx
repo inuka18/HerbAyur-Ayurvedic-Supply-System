@@ -85,6 +85,23 @@ export default function SupplierOffers() {
     try { const d = await fetch(`${API_BASE}/feedback/supplier/${supplier._id}`).then(r => r.json()); setProfileFeedback(d); } catch {}
   };
 
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const cancelRequest = async (reqId) => {
+    if (!window.confirm("Cancel this request? This cannot be undone.")) return;
+    setCancellingId(reqId);
+    try {
+      const res  = await fetch(`${API_BASE}/requests/${reqId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.message); return; }
+      fetchData();
+    } catch { alert("Something went wrong."); }
+    finally { setCancellingId(null); }
+  };
+
   const calcTotal = (items) => items.reduce((s, i) => s + i.price * i.supplyQty, 0);
 
   const activeRequests    = requests.filter(r => !r.fullyCompleted);
@@ -325,6 +342,7 @@ export default function SupplierOffers() {
     const total   = req.materials.length;
     const ordered = coveredNames.length;
     const pct     = total ? Math.round((ordered / total) * 100) : 0;
+    const canCancel = (req.coveredItems || []).length === 0;
 
     return (
       <div key={req._id} className="list-section modern-list">
@@ -340,9 +358,19 @@ export default function SupplierOffers() {
               <span>📍 {req.customer.location}</span>
             </div>
           </div>
-          <button className="view-btn" onClick={() => setVisibleLists(p => ({ ...p, [req._id]: !p[req._id] }))}>
-            <Eye size={16}/> View List
-          </button>
+          <div style={{ display:"flex", gap:"8px", alignItems:"center", flexWrap:"wrap" }}>
+            <button className="view-btn" onClick={() => setVisibleLists(p => ({ ...p, [req._id]: !p[req._id] }))}>
+              <Eye size={16}/> View List
+            </button>
+            {canCancel && (
+              <button
+                className="cancel-request-btn"
+                onClick={() => cancelRequest(req._id)}
+                disabled={cancellingId === req._id}>
+                {cancellingId === req._id ? "Cancelling..." : "✕ Cancel"}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* PROGRESS BAR */}
