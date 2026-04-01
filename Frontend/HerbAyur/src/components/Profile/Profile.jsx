@@ -26,7 +26,13 @@ export default function Profile() {
       .finally(() => setLoading(false));
   }, []);
 
+  const companyNameChanged = profile?.role === "supplier" && form.companyName !== (profile?.companyName || "");
+
   const handleSave = async () => {
+    if (companyNameChanged && !certFile) {
+      setError("Please upload a new certification when changing the company name.");
+      return;
+    }
     setSaving(true); setError(""); setSuccess("");
     try {
       const fd = new FormData();
@@ -42,8 +48,9 @@ export default function Profile() {
       if (!res.ok) { setError(data.message); return; }
       setProfile(data);
       setEditing(false);
-      setSuccess(data.role === "supplier"
-        ? "Profile changes submitted! Awaiting admin approval."
+      const needsApproval = profile.role === "supplier" && (form.companyName !== profile.companyName || certFile);
+      setSuccess(needsApproval
+        ? "Company/certification changes submitted! Awaiting admin approval."
         : "Profile updated successfully!");
     } catch { setError("Something went wrong."); }
     finally { setSaving(false); }
@@ -88,11 +95,16 @@ export default function Profile() {
                 <>
                   <div className="prof-field"><label><Building2 size={13}/> Company Name</label><input value={form.companyName} onChange={e => setForm(p => ({...p, companyName: e.target.value}))}/></div>
                   <div className="prof-field">
-                    <label><FileText size={13}/> Update Certification</label>
+                    <label>
+                      <FileText size={13}/> Certification {companyNameChanged && <span style={{color:"#dc2626"}}>* required</span>}
+                    </label>
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setCertFile(e.target.files[0])}/>
                     {certFile && <span className="prof-filename">📄 {certFile.name}</span>}
+                    {companyNameChanged && !certFile && (
+                      <span style={{fontSize:"0.78rem",color:"#dc2626",marginTop:3}}>⚠ A new certification is required when changing company name.</span>
+                    )}
                   </div>
-                  <div className="prof-note">⚠ Editing your profile will require admin re-approval.</div>
+                  <div className="prof-note">⚠ Changing company name or certification requires admin re-approval.</div>
                 </>
               )}
               <div className="prof-actions">
