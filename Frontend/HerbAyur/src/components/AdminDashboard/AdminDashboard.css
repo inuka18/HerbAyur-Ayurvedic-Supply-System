@@ -515,6 +515,7 @@
 .adm-ostat-cod .adm-ostat-num { color: #0e7490; }
 
 .adm-ostat-num {
+  display: block;
   font-size: 1.9rem;
   font-weight: 900;
   line-height: 1;
@@ -522,6 +523,7 @@
 }
 
 .adm-ostat-label {
+  display: block;
   font-size: 0.72rem;
   color: #6b7280;
   font-weight: 600;

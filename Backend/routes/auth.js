@@ -167,24 +167,38 @@ router.patch("/profile", auth, upload.single("certification"), async (req, res) 
     const { firstName, lastName, phone, address, companyName } = req.body;
 
     if (req.user.role === "supplier") {
-      // Store as pending changes — admin must approve
-      const changes = { firstName, lastName, phone, address, submittedAt: new Date() };
-      if (companyName) changes.companyName = companyName;
-      if (req.file)    changes.certificationUrl = `/uploads/${req.file.filename}`;
+      const needsApproval = companyName || req.file;
 
-      const user = await User.findByIdAndUpdate(
-        req.user.id,
-        { pendingChanges: changes },
-        { new: true }
-      ).select("-password");
+      if (companyName && !req.file) {
+        return res.status(400).json({ message: "A new certification is required when changing the company name." });
+      }
+      // Apply basic fields directly
+      const directUpdates = { firstName, lastName, phone, address };
 
-      const admin = await User.findOne({ role: "admin" });
-      if (admin) await Notification.create({
-        recipient: admin._id, recipientRole: "admin",
-        message: `Supplier ${user.firstName} ${user.lastName} submitted profile changes. Review and approve or reject.`,
-        type: "new_supplier", relatedId: user._id,
-      });
-      return res.json({ ...user.toObject(), _pendingSubmitted: true });
+      if (needsApproval) {
+        // Only companyName / certification go into pendingChanges
+        const changes = { submittedAt: new Date() };
+        if (companyName) changes.companyName = companyName;
+        if (req.file)    changes.certificationUrl = `/uploads/${req.file.filename}`;
+
+        const user = await User.findByIdAndUpdate(
+          req.user.id,
+          { ...directUpdates, pendingChanges: changes },
+          { new: true }
+        ).select("-password");
+
+        const admin = await User.findOne({ role: "admin" });
+        if (admin) await Notification.create({
+          recipient: admin._id, recipientRole: "admin",
+          message: `Supplier ${user.firstName} ${user.lastName} submitted company/certification changes. Review and approve or reject.`,
+          type: "new_supplier", relatedId: user._id,
+        });
+        return res.json({ ...user.toObject(), _pendingSubmitted: true });
+      }
+
+      // No company/cert change — apply everything directly
+      const user = await User.findByIdAndUpdate(req.user.id, directUpdates, { new: true }).select("-password");
+      return res.json(user);
     }
 
     // Customers & Admin — apply directly
@@ -207,10 +221,6 @@ router.post("/profile-changes/:supplierId/:action", auth, async (req, res) => {
     if (action === "approve") {
       const c = supplier.pendingChanges;
       update = {
-        firstName:        c.firstName        || supplier.firstName,
-        lastName:         c.lastName         || supplier.lastName,
-        phone:            c.phone            || supplier.phone,
-        address:          c.address          || supplier.address,
         companyName:      c.companyName      || supplier.companyName,
         certificationUrl: c.certificationUrl || supplier.certificationUrl,
         pendingChanges:   {},
