@@ -24,6 +24,7 @@ router.post("/", auth, async (req, res) => {
       items:         offer.items,
       totalAmount:   offer.items.reduce((s, i) => s + i.price * i.supplyQty, 0),
       paymentMethod,
+      paymentStatus: paymentMethod === "Cash on Delivery" ? "Pending" : "Paid",
       listName:      offer.requestId.listName || "",
       supplierName:  offer.supplierId.companyName || `${offer.supplierId.firstName} ${offer.supplierId.lastName}`,
       customerName:  req.user.name,
@@ -80,7 +81,9 @@ router.post("/", auth, async (req, res) => {
     await Notification.create({
       recipient:     offer.supplierId._id,
       recipientRole: "supplier",
-      message:       `📦 New order #${order.receiptNo} confirmed! Customer paid for "${offer.requestId.listName || 'a request'}". Please process the order.`,
+      message:       paymentMethod === "Cash on Delivery"
+        ? `📦 New COD order #${order.receiptNo} placed for "${offer.requestId.listName || 'a request'}". Payment is pending on delivery.`
+        : `📦 New order #${order.receiptNo} confirmed! Customer paid for "${offer.requestId.listName || 'a request'}". Please process the order.`,
       type:          "order_confirmed",
       relatedId:     order._id,
     });
@@ -89,7 +92,9 @@ router.post("/", auth, async (req, res) => {
     await Notification.create({
       recipient:     offer.requestId.customerId,
       recipientRole: "customer",
-      message:       `✅ Payment successful! Order #${order.receiptNo} placed with ${order.supplierName}. Status: Confirmed.`,
+      message:       paymentMethod === "Cash on Delivery"
+        ? `🕐 COD order #${order.receiptNo} placed with ${order.supplierName}. Payment is pending — please pay on delivery.`
+        : `✅ Payment successful! Order #${order.receiptNo} placed with ${order.supplierName}. Status: Confirmed.`,
       type:          "order_confirmed",
       relatedId:     order._id,
     });
@@ -172,6 +177,55 @@ router.patch("/:id/status", auth, async (req, res) => {
       recipient:     order.customerId,
       recipientRole: "customer",
       message:       `📦 Your order #${order.receiptNo} from ${order.supplierName} is now "${req.body.orderStatus}".`,
+      type:          "order_status_update",
+      relatedId:     order._id,
+    });
+
+    res.json(order);
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+// PATCH — customer marks COD payment as paid (after delivery)
+router.patch("/:id/pay-cod", auth, async (req, res) => {
+  if (req.user.role !== "customer") return res.status(403).json({ message: "Only customers can do this." });
+  try {
+    const order = await Order.findOne({ _id: req.params.id, customerId: req.user.id });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.paymentMethod !== "Cash on Delivery") return res.status(400).json({ message: "Not a COD order." });
+    if (order.orderStatus !== "Delivered") return res.status(400).json({ message: "Order must be delivered before marking as paid." });
+    if (order.paymentStatus !== "Pending") return res.status(400).json({ message: "Payment already updated." });
+
+    order.paymentStatus = "Paid";
+    await order.save();
+
+    await Notification.create({
+      recipient:     order.supplierId,
+      recipientRole: "supplier",
+      message:       `💵 Customer marked COD payment as paid for order #${order.receiptNo}. Please confirm receipt of cash.`,
+      type:          "order_status_update",
+      relatedId:     order._id,
+    });
+
+    res.json(order);
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+// PATCH — supplier confirms COD cash received
+router.patch("/:id/confirm-cod-payment", auth, async (req, res) => {
+  if (req.user.role !== "supplier") return res.status(403).json({ message: "Only suppliers can do this." });
+  try {
+    const order = await Order.findOne({ _id: req.params.id, supplierId: req.user.id });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.paymentMethod !== "Cash on Delivery") return res.status(400).json({ message: "Not a COD order." });
+    if (order.paymentStatus !== "Paid") return res.status(400).json({ message: "Customer has not marked payment yet." });
+
+    order.paymentStatus = "COD Confirmed";
+    await order.save();
+
+    await Notification.create({
+      recipient:     order.customerId,
+      recipientRole: "customer",
+      message:       `✅ Supplier confirmed receipt of your COD payment for order #${order.receiptNo}.`,
       type:          "order_status_update",
       relatedId:     order._id,
     });

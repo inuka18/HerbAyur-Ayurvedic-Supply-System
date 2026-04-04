@@ -312,3 +312,35 @@ display:none;
 
 .pro-drop-logout { color: #dc2626; }
 .pro-drop-logout:hover { background: #fee2e2; color: #dc2626; }
+
+/* =========================
+   ADD: GREEN BACKGROUND ONLY FOR NAV LINKS
+========================= */
+
+/* container */
+.pro-nav-highlight{
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  padding: 6px 10px;
+  border-radius: 30px;
+  border: 1px solid rgba(34,197,94,0.2);
+  box-shadow: inset 0 1px 3px rgba(255,255,255,0.6);
+}
+
+/* improve nav items inside it */
+.pro-nav-highlight .pro-nav-item{
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+
+/* hover effect */
+.pro-nav-highlight .pro-nav-item:hover{
+  background: rgba(34,197,94,0.15);
+  color: #14532d;
+}
+
+/* active effect */
+.pro-nav-highlight .pro-nav-item.active{
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  color: white;
+  box-shadow: 0 4px 12px rgba(34,197,94,0.35);
+}

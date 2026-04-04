@@ -317,14 +317,28 @@ export default function AdminDashboard() {
                       })
                       .map((s,i)=>(
                       <tr key={s._id}>
-                        <td>{i+1}</td><td>{s.firstName} {s.lastName}{s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}{s.warnings?.length > 0 && <span className="warn-count-tag">⚠️ {s.warnings.length} warning{s.warnings.length > 1 ? "s" : ""}</span>}</td><td>{s.companyName||"—"}</td>
+                        <td>{i+1}</td>
+                        <td>
+                          <div className="supplier-name-cell">
+                            <span className="supplier-name">{s.firstName} {s.lastName}</span>
+                            <div className="supplier-tags">
+                              {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
+                              {s.warnings?.length > 0 && (
+                                <span className="warn-count-tag">
+                                  <span className="warn-tag-icon">⚠️</span>
+                                  {s.warnings.length} Warning{s.warnings.length > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{s.companyName||"—"}</td>
                         <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
                         <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
                         <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
                         <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
                         <td className="action-btns">
                           {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
-                          {s.status!=="pending"&&<span style={{color:"#9ca3af",fontSize:"0.8rem"}}>—</span>}
                           <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
                           <button className="btn-remove" onClick={() => removeUser(s._id, `${s.firstName} ${s.lastName}`)}>🗑 Remove</button>
                         </td>

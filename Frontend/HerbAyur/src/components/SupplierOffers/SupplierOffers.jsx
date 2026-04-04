@@ -514,7 +514,6 @@ export default function SupplierOffers() {
             <option value="All">All Requests</option>
             <option value="No Orders">No Orders Yet</option>
             <option value="Partial">Partially Ordered</option>
-            <option value="Completed">Fully Completed</option>
           </select>
         </div>
       </div>

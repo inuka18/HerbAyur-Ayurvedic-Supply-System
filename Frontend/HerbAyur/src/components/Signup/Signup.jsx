@@ -1,12 +1,18 @@
-import { useState } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import { UserPlus, User, Phone, MapPin, Mail, Lock, Building2, FileText } from "lucide-react";
 import API_BASE from "../../api";
 import "../Login/Login.css";
 
 function Signup() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [role, setRole]       = useState("customer");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("role") === "supplier") setRole("supplier");
+  }, [location.search]);
   const [certFile, setCertFile] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
@@ -17,11 +23,51 @@ function Signup() {
     phone: "", address: "", companyName: "",
   });
 
-  const handleChange = (e) =>
+  const [fieldErrors, setFieldErrors] = useState({ email: "", companyName: "" });
+
+  const checkAvailability = async (field, value) => {
+    if (!value) return;
+    const res = await fetch(`${API_BASE}/auth/check-availability`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    }).then(r => r.json()).catch(() => ({ available: true }));
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: res.available ? "" : field === "email" ? "Email is already registered." : "Company name is already taken.",
+    }));
+  };
+
+  const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    if (fieldErrors[e.target.name]) setFieldErrors(prev => ({ ...prev, [e.target.name]: "" }));
+  };
+
+  const validate = () => {
+    if (fieldErrors.email || fieldErrors.companyName) {
+      setError("Please fix the errors above before submitting.");
+      return false;
+    }
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(form.phone)) {
+      setError("Contact number must be 10 digits and start with 0.");
+      return false;
+    }
+    if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      setError("Password must be at least 8 characters, include an uppercase letter and a number.");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setLoading(true);
     setError("");
 
@@ -109,17 +155,18 @@ function Signup() {
 
           <div className="auth-group">
             <label><Mail size={14}/> Email</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
+            <input type="email" name="email" value={form.email} onChange={handleChange} onBlur={e => checkAvailability("email", e.target.value)} placeholder="you@example.com" required />
+            {fieldErrors.email && <span className="auth-field-error">{fieldErrors.email}</span>}
           </div>
 
           <div className="auth-group">
             <label><Lock size={14}/> Password</label>
-            <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required minLength={6} />
+            <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="Min 8 chars, 1 uppercase, 1 number" required minLength={8} />
           </div>
 
           <div className="auth-group">
             <label><Phone size={14}/> Contact Number</label>
-            <input name="phone" value={form.phone} onChange={handleChange} placeholder="+94 77 XXX XXXX" required />
+            <input name="phone" value={form.phone} onChange={handleChange} placeholder="07XXXXXXXX" required maxLength={10} inputMode="numeric" onKeyDown={e => { if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }} />
           </div>
 
           <div className="auth-group">
@@ -132,7 +179,8 @@ function Signup() {
             <div className="supplier-extra">
               <div className="auth-group">
                 <label><Building2 size={14}/> Company Name</label>
-                <input name="companyName" value={form.companyName} onChange={handleChange} placeholder="Your Company Pvt Ltd" required />
+                <input name="companyName" value={form.companyName} onChange={handleChange} onBlur={e => checkAvailability("companyName", e.target.value)} placeholder="Your Company Pvt Ltd" required />
+                {fieldErrors.companyName && <span className="auth-field-error">{fieldErrors.companyName}</span>}
               </div>
 
               <div className="file-upload-label">

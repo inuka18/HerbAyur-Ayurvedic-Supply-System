@@ -221,7 +221,7 @@ export default function CustomerOrders() {
             <span>📬 Supplier marked this as Delivered. Did you receive your order?</span>
             <button className="co-confirm-btn" onClick={() => confirmDelivery(o._id)} disabled={confirmingId === o._id}>
               <CheckCircle2 size={15}/>
-              {confirmingId === o._id ? "Confirming..." : "Confirm Receipt"}
+              {confirmingId === o._id ? "Confirming..." : "Confirm Received Order"}
             </button>
           </div>
         )}

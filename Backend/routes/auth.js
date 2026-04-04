@@ -36,6 +36,22 @@ router.get("/users", auth, async (req, res) => {
   res.json(users);
 });
 
+// CHECK availability (email / companyName)
+router.post("/check-availability", async (req, res) => {
+  try {
+    const { email, companyName } = req.body;
+    if (email) {
+      const exists = await User.findOne({ email });
+      return res.json({ available: !exists });
+    }
+    if (companyName) {
+      const exists = await User.findOne({ companyName: { $regex: new RegExp(`^${companyName}$`, 'i') } });
+      return res.json({ available: !exists });
+    }
+    res.status(400).json({ message: "Provide email or companyName" });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // REGISTER
 router.post("/register", upload.single("certification"), async (req, res) => {
   try {

@@ -411,69 +411,6 @@ transform:translateY(-1px);
   font-weight: 600;
 }
 
-/* SUB-FILTER PILLS */
-.sm-sub-filters {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.2rem;
-  flex-wrap: wrap;
-}
-
-.sm-sub-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-right: 4px;
-}
-
-.sm-sub-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: 20px;
-  border: 1.5px solid #e5e7eb;
-  background: #f9fafb;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.sm-sub-pill:hover { background: #f3f4f6; border-color: #d1d5db; }
-
-.sm-sub-pill.active {
-  background: #1a3c34;
-  color: white;
-  border-color: #1a3c34;
-}
-
-.sm-sub-pill.amber         { border-color: #fde68a; color: #92400e; background: #fffbeb; }
-.sm-sub-pill.amber:hover   { background: #fef3c7; }
-.sm-sub-pill.amber.active  { background: #d97706; color: white; border-color: #d97706; }
-
-.sm-sub-pill.green         { border-color: #86efac; color: #166534; background: #f0fdf4; }
-.sm-sub-pill.green:hover   { background: #dcfce7; }
-.sm-sub-pill.green.active  { background: #15803d; color: white; border-color: #15803d; }
-
-.sm-sub-pill.red           { border-color: #fca5a5; color: #991b1b; background: #fff5f5; }
-.sm-sub-pill.red:hover     { background: #fee2e2; }
-.sm-sub-pill.red.active    { background: #dc2626; color: white; border-color: #dc2626; }
-
-.sm-sub-count {
-  background: rgba(0,0,0,0.08);
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.sm-sub-pill.active .sm-sub-count { background: rgba(255,255,255,0.25); }
-
 /* VIEW TABS */
 .sm-view-tabs {
   display: flex;
@@ -495,15 +432,6 @@ transform:translateY(-1px);
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
-}
-
-.sm-tab-divider {
-  width: 1px;
-  height: 22px;
-  background: #d1fae5;
-  align-self: center;
-  margin: 0 4px;
-  display: inline-block;
 }
 
 .sm-view-tab.active { background: #166534; color: white; border-color: #166534; }

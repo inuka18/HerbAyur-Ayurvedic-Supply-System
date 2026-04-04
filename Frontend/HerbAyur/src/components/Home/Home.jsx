@@ -78,7 +78,7 @@ export default function Home() {
               <button className="hero-btn-primary" onClick={() => navigate('/RequestForm')}>
                 📋 Post Requirement
               </button>
-              <button className="hero-btn-outline" onClick={() => navigate('/Signup')}>
+              <button className="hero-btn-outline" onClick={() => navigate('/Signup?role=supplier')}>
                 🏭 Join as Supplier
               </button>
             </div>
@@ -136,7 +136,7 @@ export default function Home() {
 
       {/* CATEGORIES */}
       <section className="categories-modern">
-        <h2>Browse Categories</h2>
+        <h2>Categories Of Herbs You Can Find Here </h2>
         <div className="category-grid">
           {categories.map(item => (
             <div key={item.name} className="category-card">
