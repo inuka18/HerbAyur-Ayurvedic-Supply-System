@@ -136,7 +136,7 @@ export default function Home() {
 
       {/* CATEGORIES */}
       <section className="categories-modern">
-        <h2>Browse Categories</h2>
+        <h2>Categories Of Herbs You Can Find Here </h2>
         <div className="category-grid">
           {categories.map(item => (
             <div key={item.name} className="category-card">
