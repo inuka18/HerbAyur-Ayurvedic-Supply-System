@@ -282,6 +282,28 @@ router.post("/warn/:userId", auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// DELETE — admin removes a specific warning from a supplier
+router.delete("/warn/:userId/:warningIndex", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const idx = Number(req.params.warningIndex);
+    if (isNaN(idx) || idx < 0 || idx >= (user.warnings || []).length)
+      return res.status(400).json({ message: "Invalid warning index." });
+    user.warnings.splice(idx, 1);
+    await user.save();
+    await Notification.create({
+      recipient:     user._id,
+      recipientRole: user.role,
+      message:       `✅ A warning issued to your account has been removed by admin.`,
+      type:          "new_supplier",
+      relatedId:     user._id,
+    });
+    res.json({ message: "Warning removed.", warnings: user.warnings });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // DELETE — admin removes a user from the system
 router.delete("/remove/:userId", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
@@ -297,6 +319,24 @@ router.delete("/remove/:userId", auth, async (req, res) => {
 // DELETE own account
 router.delete("/profile", auth, async (req, res) => {
   try {
+    const Order = require("../models/Order");
+    const field = req.user.role === "customer" ? "customerId" : "supplierId";
+
+    const activeOrder = await Order.findOne({
+      [field]: req.user.id,
+      $or: [
+        { orderStatus: { $in: ["Confirmed", "Processing"] } },
+        { paymentStatus: "Pending" },
+      ],
+    });
+
+    if (activeOrder) {
+      const reason = activeOrder.paymentStatus === "Pending"
+        ? `You have a pending COD payment for order #${activeOrder.receiptNo}. Please complete the payment before deleting your account.`
+        : `You have an active order #${activeOrder.receiptNo} (${activeOrder.orderStatus}). Please wait until it is delivered before deleting your account.`;
+      return res.status(400).json({ message: reason });
+    }
+
     await User.findByIdAndDelete(req.user.id);
     res.json({ message: "Account deleted" });
   } catch (err) { res.status(500).json({ message: err.message }); }

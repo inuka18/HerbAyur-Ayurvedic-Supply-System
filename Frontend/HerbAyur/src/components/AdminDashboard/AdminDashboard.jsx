@@ -142,6 +142,14 @@ export default function AdminDashboard() {
     fetchSuppliers();
   };
 
+  const removeWarning = async (supplierId, warningIndex) => {
+    await fetch(`${API_BASE}/auth/warn/${supplierId}/${warningIndex}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token()}` },
+    });
+    fetchSuppliers();
+  };
+
   const pendingCount = suppliers.filter(s=>s.status==="pending").length;
 
   // Chart data
@@ -323,11 +331,18 @@ export default function AdminDashboard() {
                             <span className="supplier-name">{s.firstName} {s.lastName}</span>
                             <div className="supplier-tags">
                               {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
-                              {s.warnings?.length > 0 && (
-                                <span className="warn-count-tag">
-                                  <span className="warn-tag-icon">⚠️</span>
-                                  {s.warnings.length} Warning{s.warnings.length > 1 ? "s" : ""}
-                                </span>
+                            {s.warnings?.length > 0 && (
+                                s.warnings.map((w, wi) => (
+                                  <span key={wi} className="warn-count-tag">
+                                    <span className="warn-tag-icon">⚠️</span>
+                                    Warning {wi + 1}
+                                    <button
+                                      className="warn-tag-remove"
+                                      title={w.message}
+                                      onClick={() => removeWarning(s._id, wi)}
+                                    >×</button>
+                                  </span>
+                                ))
                               )}
                             </div>
                           </div>

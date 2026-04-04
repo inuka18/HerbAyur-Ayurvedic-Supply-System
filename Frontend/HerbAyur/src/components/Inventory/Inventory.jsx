@@ -130,14 +130,6 @@ function Inventory() {
             <span className="inv-stat-num">{items.length}</span>
             <span className="inv-stat-label">Total Items</span>
           </div>
-          <div className="inv-stat-card inv-stat-priced">
-            <span className="inv-stat-num">{items.filter(i => i.price > 0).length}</span>
-            <span className="inv-stat-label">With Price</span>
-          </div>
-          <div className="inv-stat-card inv-stat-missing">
-            <span className="inv-stat-num">{items.filter(i => !i.price || i.price === 0).length}</span>
-            <span className="inv-stat-label">Missing Price</span>
-          </div>
           <div className="inv-stat-card inv-stat-instock">
             <span className="inv-stat-num">{items.filter(i => i.quantity > 0).length}</span>
             <span className="inv-stat-label">In Stock</span>
