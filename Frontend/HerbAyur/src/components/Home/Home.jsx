@@ -78,7 +78,7 @@ export default function Home() {
               <button className="hero-btn-primary" onClick={() => navigate('/RequestForm')}>
                 📋 Post Requirement
               </button>
-              <button className="hero-btn-outline" onClick={() => navigate('/Signup')}>
+              <button className="hero-btn-outline" onClick={() => navigate('/Signup?role=supplier')}>
                 🏭 Join as Supplier
               </button>
             </div>

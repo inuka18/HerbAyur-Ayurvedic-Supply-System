@@ -323,3 +323,33 @@
 }
 
 .pd-close-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* ── COD CONFIRMED BADGE ── */
+.pd-cod-confirmed { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+
+/* ── COD ACTION BUTTONS ── */
+.pd-cod-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.pd-cod-action-btn:hover { background: #fef3c7; border-color: #f59e0b; }
+
+.pd-cod-confirm-btn {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.pd-cod-confirm-btn:hover { background: #dcfce7; border-color: #4ade80; }
