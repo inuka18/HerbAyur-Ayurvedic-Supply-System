@@ -31,7 +31,9 @@ export const PRINT_CSS = `
 export function printReport(contentRef, title) {
   const win = window.open("", "_blank");
   win.document.write(`<html><head><title>${title}</title><style>${PRINT_CSS}</style></head><body>${contentRef.current.innerHTML}</body></html>`);
-  win.document.close(); win.focus(); win.print(); win.close();
+  win.document.close();
+  win.focus();
+  win.onload = () => { win.print(); win.close(); };
 }
 
 export function RptHeader({ title, meta }) {

@@ -90,10 +90,18 @@ function CardPortal({ total, onSuccess, onCancel }) {
   const handlePay = () => {
     setErr("");
     const num = card.number.replace(/\s/g,"");
-    if (num.length < 16)       return setErr("Enter a valid 16-digit card number.");
-    if (!card.name.trim())     return setErr("Enter the cardholder name.");
+    if (num.length < 16)        return setErr("Enter a valid 16-digit card number.");
+    if (!card.name.trim())      return setErr("Enter the cardholder name.");
     if (card.expiry.length < 5) return setErr("Enter a valid expiry date (MM/YY).");
-    if (card.cvv.length < 3)   return setErr("Enter a valid CVV.");
+
+    const [mm, yy] = card.expiry.split("/").map(Number);
+    const now = new Date();
+    const expDate = new Date(2000 + yy, mm - 1, 1);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (!mm || mm < 1 || mm > 12 || !yy) return setErr("Enter a valid expiry date (MM/YY).");
+    if (expDate < thisMonth) return setErr("Card has expired. Please use a valid card.");
+
+    if (card.cvv.length < 3)    return setErr("Enter a valid CVV.");
     setProcessing(true);
     setTimeout(() => { setProcessing(false); onSuccess(); }, 2000);
   };

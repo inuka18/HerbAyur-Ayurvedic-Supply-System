@@ -12,7 +12,13 @@ export default function CustomerRequestReport() {
 
   useEffect(() => {
     fetch(`${API_BASE}/requests`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setRequests(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
+      .then(r => r.json())
+      .then(d => {
+        const all = Array.isArray(d) ? d : [];
+        setRequests(all.filter(r => r.customerId === user.id || r.customerId?._id === user.id));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="rpt-loading">Loading...</div>;

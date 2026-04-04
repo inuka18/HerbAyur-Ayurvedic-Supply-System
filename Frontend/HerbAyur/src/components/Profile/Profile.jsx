@@ -16,6 +16,8 @@ export default function Profile() {
   const [success, setSuccess]   = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const [deleteError, setDeleteError] = useState("");
+
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -58,11 +60,13 @@ export default function Profile() {
 
   const handleDelete = async () => {
     try {
-      await fetch(`${API_BASE}/auth/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const res  = await fetch(`${API_BASE}/auth/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) { setDeleteError(data.message); return; }
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       navigate("/");
-    } catch { setError("Failed to delete account."); }
+    } catch { setDeleteError("Failed to delete account. Please try again."); }
   };
 
   if (loading) return <div className="prof-page"><p className="prof-loading">Loading profile...</p></div>;
@@ -140,9 +144,10 @@ export default function Profile() {
           <div className="prof-confirm-modal">
             <h3>⚠ Delete Account</h3>
             <p>Are you sure? This action cannot be undone.</p>
+            {deleteError && <div className="prof-error">⚠ {deleteError}</div>}
             <div className="prof-actions">
               <button className="prof-delete-btn" onClick={handleDelete}>Yes, Delete</button>
-              <button className="prof-cancel-btn" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              <button className="prof-cancel-btn" onClick={() => { setConfirmDelete(false); setDeleteError(""); }}>Cancel</button>
             </div>
           </div>
         </div>
