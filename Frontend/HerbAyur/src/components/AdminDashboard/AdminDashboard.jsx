@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import API_BASE from "../../api";
 import "./AdminDashboard.css";
 import { AdminReport } from "../Reports/Reports";
@@ -34,7 +35,12 @@ function StatCard({ icon, label, value, color }) {
 }
 
 export default function AdminDashboard() {
-  const [tab, setTab]               = useState("overview");
+  const location = useLocation();
+  const [tab, setTab]               = useState(location.state?.tab || "overview");
+
+  useEffect(() => {
+    if (location.state?.tab) setTab(location.state.tab);
+  }, [location.state?.tab]);
   const [suppliers, setSuppliers]   = useState([]);
   const [ratings, setRatings]       = useState({});
   const [messages, setMessages]     = useState([]);
@@ -435,7 +441,7 @@ export default function AdminDashboard() {
                 <input className="adm-filter-select" type="date" value={ordDate} onChange={e => setOrdDate(e.target.value)} title="Filter by date"/>
               </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
                 <tbody>
                   {adminOrders
                     .filter(o => {
@@ -461,6 +467,11 @@ export default function AdminDashboard() {
                       <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
                       <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
                       <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
+                      <td><span className={`status-badge ${
+                        o.paymentStatus === "COD Confirmed" ? "status-approved" :
+                        o.paymentStatus === "Paid"          ? "status-approved" :
+                        "status-pending"
+                      }`}>{o.paymentStatus}</span></td>
                       <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
                       <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
                     </tr>
