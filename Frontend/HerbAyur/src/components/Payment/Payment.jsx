@@ -131,7 +131,8 @@ function CardPortal({ total, onSuccess, onCancel }) {
         <div className="card-field">
           <label>Cardholder Name</label>
           <input placeholder="Name on card" value={card.name}
-            onChange={e => setCard(p => ({...p, name: e.target.value.toUpperCase()}))}/>
+            onChange={e => setCard(p => ({...p, name: e.target.value.toUpperCase()}))}
+            onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }}/>
         </div>
         <div className="card-row">
           <div className="card-field">
@@ -142,7 +143,7 @@ function CardPortal({ total, onSuccess, onCancel }) {
           <div className="card-field">
             <label>CVV</label>
             <div className="cvv-wrap">
-              <input type={showCvv ? "text" : "password"} placeholder="•••" maxLength={4}
+              <input type={showCvv ? "text" : "password"} placeholder="•••/••••" maxLength={4}
                 value={card.cvv} onChange={e => setCard(p => ({...p, cvv: e.target.value.replace(/\D/g,"").slice(0,4)}))}/>
               <button type="button" className="cvv-eye" onClick={() => setShowCvv(p => !p)}>
                 {showCvv ? <EyeOff size={14}/> : <Eye size={14}/>}
