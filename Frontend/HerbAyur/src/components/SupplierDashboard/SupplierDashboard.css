@@ -78,3 +78,49 @@
   border-color: white;
   box-shadow: 0 3px 10px rgba(0,0,0,0.15);
 }
+
+/* ── PENDING LOCK SCREEN ── */
+.sd-locked-wrap {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #f4f6f9;
+}
+
+.sd-locked-card {
+  background: white;
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  border: 2px solid #fed7aa;
+}
+
+.sd-locked-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.sd-locked-card h2 {
+  color: #c2410c;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0 0 0.8rem;
+}
+
+.sd-locked-card p {
+  color: #6b7280;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 0 0.5rem;
+}
+
+.sd-locked-sub {
+  font-size: 0.82rem !important;
+  color: #9ca3af !important;
+}

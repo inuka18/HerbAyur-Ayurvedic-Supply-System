@@ -145,11 +145,11 @@ function Signup() {
           <div className="auth-row">
             <div className="auth-group">
               <label><User size={14}/> First Name</label>
-              <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Renuka" required />
+              <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Renuka" required onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }} />
             </div>
             <div className="auth-group">
               <label><User size={14}/> Last Name</label>
-              <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Jeevani" required />
+              <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Jeevani" required onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }} />
             </div>
           </div>
 
