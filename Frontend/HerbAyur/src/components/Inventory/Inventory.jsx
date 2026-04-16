@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, RefreshCw, PackageOpen, X, Check, Edit2 } from "lucide-react";
 import API_BASE from "../../api";
 import "./Inventory.css";
-import { CATEGORIES, ALL_UNITS } from "../../materialOptions";
+import { CATEGORIES, getUnits, normalizeCategory } from "../../materialOptions";
 
 const token = () => localStorage.getItem("token");
 
@@ -13,7 +13,7 @@ function Inventory() {
   const [editItem, setEditItem]   = useState(null);
   const [restockId, setRestockId] = useState(null);
   const [restockQty, setRestockQty] = useState("");
-  const [form, setForm] = useState({ name: "", category: "Roots", quantity: "", unit: "kg", price: "", aliases: "" });
+  const [form, setForm] = useState({ name: "", category: "Raw Herb", quantity: "", unit: "kg", price: "", aliases: "" });
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
 
@@ -29,7 +29,18 @@ function Inventory() {
 
   useEffect(() => { fetchItems(); }, []);
 
-  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => {
+      if (name !== "category") return { ...prev, [name]: value };
+      const nextUnits = getUnits(value);
+      return {
+        ...prev,
+        category: value,
+        unit: nextUnits.includes(prev.unit) ? prev.unit : nextUnits[0],
+      };
+    });
+  };
 
   // Unit conversion pairs for price auto-calculation
   const UNIT_CONVERSIONS = {
@@ -58,13 +69,22 @@ function Inventory() {
 
   const openAdd = () => {
     setEditItem(null);
-    setForm({ name: "", category: "Roots", quantity: "", unit: "kg", price: "", aliases: "" });
+    setForm({ name: "", category: "Raw Herb", quantity: "", unit: "kg", price: "", aliases: "" });
     setError(""); setSuccess(""); setShowForm(true);
   };
 
   const openEdit = (item) => {
+    const itemCategory = normalizeCategory(item.category);
+    const allowedUnits = getUnits(itemCategory);
     setEditItem(item);
-    setForm({ name: item.name, category: item.category || "Roots", quantity: item.quantity, unit: item.unit, price: item.price || "", aliases: item.aliases.join(", ") });
+    setForm({
+      name: item.name,
+      category: itemCategory,
+      quantity: item.quantity,
+      unit: allowedUnits.includes(item.unit) ? item.unit : allowedUnits[0],
+      price: item.price || "",
+      aliases: item.aliases.join(", "),
+    });
     setError(""); setSuccess(""); setShowForm(true);
   };
 
@@ -111,6 +131,7 @@ function Inventory() {
   };
 
   const stockLevel = (qty) => qty === 0 ? "out" : qty <= 5 ? "low" : qty <= 20 ? "medium" : "good";
+  const availableUnits = getUnits(form.category);
 
   return (
     <div className="inv-page">
@@ -231,7 +252,7 @@ function Inventory() {
                 <div className="inv-field">
                   <label>Unit</label>
                   <select name="unit" value={form.unit} onChange={handleChange}>
-                    {ALL_UNITS.map(u => <option key={u}>{u}</option>)}
+                    {availableUnits.map(u => <option key={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
