@@ -102,6 +102,11 @@ function SupplierConfirmation() {
   const toggleSelect = (id) =>
     setMaterials(materials.map(m => m.id === id ? { ...m, selected: !m.selected } : m));
 
+  const canSelectAll = !matchLoading && materials.every(m => {
+    const match = inventoryMatch[m.name];
+    return match && match.quantity > 0;
+  });
+
   const selectAll = () => {
     const all = materials.every(m => m.selected);
     setMaterials(materials.map(m => ({ ...m, selected: !all })));
@@ -219,7 +224,13 @@ function SupplierConfirmation() {
             <form onSubmit={handleSubmit}>
               <div className="materials-header">
                 <h2>Requested Raw Materials</h2>
-                <button type="button" className="btn-select-all" onClick={selectAll}>
+                <button
+                  type="button"
+                  className="btn-select-all"
+                  onClick={selectAll}
+                  disabled={!canSelectAll}
+                  title={!canSelectAll ? "Some materials are not available in your inventory" : ""}
+                >
                   {materials.every(m => m.selected)
                     ? <><CheckSquare size={16}/> Deselect All</>
                     : <><Square size={16}/> Select All</>}

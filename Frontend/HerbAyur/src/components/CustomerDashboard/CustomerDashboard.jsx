@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import SupplierOffers from "../SupplierOffers/SupplierOffers";
 import CustomerOrders from "../Orders/CustomerOrders";
 import { CustomerReport } from "../Reports/Reports";
@@ -13,7 +14,12 @@ const TABS = [
 ];
 
 function CustomerDashboard() {
-  const [tab, setTab] = useState("offers");
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.tab || "offers");
+
+  useEffect(() => {
+    if (location.state?.tab) setTab(location.state.tab);
+  }, [location.state?.tab]);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   return (

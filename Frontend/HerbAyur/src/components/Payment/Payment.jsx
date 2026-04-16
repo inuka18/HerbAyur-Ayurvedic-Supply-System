@@ -90,10 +90,18 @@ function CardPortal({ total, onSuccess, onCancel }) {
   const handlePay = () => {
     setErr("");
     const num = card.number.replace(/\s/g,"");
-    if (num.length < 16)       return setErr("Enter a valid 16-digit card number.");
-    if (!card.name.trim())     return setErr("Enter the cardholder name.");
+    if (num.length < 16)        return setErr("Enter a valid 16-digit card number.");
+    if (!card.name.trim())      return setErr("Enter the cardholder name.");
     if (card.expiry.length < 5) return setErr("Enter a valid expiry date (MM/YY).");
-    if (card.cvv.length < 3)   return setErr("Enter a valid CVV.");
+
+    const [mm, yy] = card.expiry.split("/").map(Number);
+    const now = new Date();
+    const expDate = new Date(2000 + yy, mm - 1, 1);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (!mm || mm < 1 || mm > 12 || !yy) return setErr("Enter a valid expiry date (MM/YY).");
+    if (expDate < thisMonth) return setErr("Card has expired. Please use a valid card.");
+
+    if (card.cvv.length < 3)    return setErr("Enter a valid CVV.");
     setProcessing(true);
     setTimeout(() => { setProcessing(false); onSuccess(); }, 2000);
   };
@@ -123,7 +131,8 @@ function CardPortal({ total, onSuccess, onCancel }) {
         <div className="card-field">
           <label>Cardholder Name</label>
           <input placeholder="Name on card" value={card.name}
-            onChange={e => setCard(p => ({...p, name: e.target.value.toUpperCase()}))}/>
+            onChange={e => setCard(p => ({...p, name: e.target.value.toUpperCase()}))}
+            onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }}/>
         </div>
         <div className="card-row">
           <div className="card-field">
@@ -134,7 +143,7 @@ function CardPortal({ total, onSuccess, onCancel }) {
           <div className="card-field">
             <label>CVV</label>
             <div className="cvv-wrap">
-              <input type={showCvv ? "text" : "password"} placeholder="•••" maxLength={4}
+              <input type={showCvv ? "text" : "password"} placeholder="•••/••••" maxLength={4}
                 value={card.cvv} onChange={e => setCard(p => ({...p, cvv: e.target.value.replace(/\D/g,"").slice(0,4)}))}/>
               <button type="button" className="cvv-eye" onClick={() => setShowCvv(p => !p)}>
                 {showCvv ? <EyeOff size={14}/> : <Eye size={14}/>}
