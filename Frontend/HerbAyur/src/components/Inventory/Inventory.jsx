@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, RefreshCw, PackageOpen, X, Check, Edit2 } from "lucide-react";
 import API_BASE from "../../api";
 import "./Inventory.css";
-import { CATEGORIES, getUnits, normalizeCategory } from "../../materialOptions";
+import { CATEGORIES, CONDITIONS, PARTS, getUnits, normalizeCategory } from "../../materialOptions";
 
 const token = () => localStorage.getItem("token");
 
@@ -13,7 +13,7 @@ function Inventory() {
   const [editItem, setEditItem]   = useState(null);
   const [restockId, setRestockId] = useState(null);
   const [restockQty, setRestockQty] = useState("");
-  const [form, setForm] = useState({ name: "", category: "Raw Herb", quantity: "", unit: "kg", price: "", aliases: "" });
+  const [form, setForm] = useState({ name: "", category: "Raw Herb", condition: "Fresh", parts: "Whole", quantity: "", unit: "kg", price: "", aliases: "" });
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
 
@@ -69,7 +69,7 @@ function Inventory() {
 
   const openAdd = () => {
     setEditItem(null);
-    setForm({ name: "", category: "Raw Herb", quantity: "", unit: "kg", price: "", aliases: "" });
+    setForm({ name: "", category: "Raw Herb", condition: "Fresh", parts: "Whole", quantity: "", unit: "kg", price: "", aliases: "" });
     setError(""); setSuccess(""); setShowForm(true);
   };
 
@@ -80,6 +80,8 @@ function Inventory() {
     setForm({
       name: item.name,
       category: itemCategory,
+      condition: item.condition || "Fresh",
+      parts: item.parts || "Whole",
       quantity: item.quantity,
       unit: allowedUnits.includes(item.unit) ? item.unit : allowedUnits[0],
       price: item.price || "",
@@ -93,6 +95,8 @@ function Inventory() {
     const payload = {
       name:     form.name.trim(),
       category: form.category,
+      condition: form.condition,
+      parts: form.parts,
       quantity: Number(form.quantity),
       unit:     form.unit,
       price:    Number(form.price) || 0,
@@ -169,7 +173,7 @@ function Inventory() {
           <table className="inv-table">
             <thead>
               <tr>
-                <th>#</th><th>Item Name</th><th>Category</th><th>Also Known As</th>
+                <th>#</th><th>Item Name</th><th>Category</th><th>Condition</th><th>Parts</th><th>Also Known As</th>
                 <th>Price/Unit</th><th>Stock</th><th>Unit</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
@@ -179,6 +183,8 @@ function Inventory() {
                   <td>{i + 1}</td>
                   <td className="inv-name">{item.name}</td>
                   <td><span className="alias-tag" style={{background:"#f0fdf4",color:"#166534"}}>{item.category || "—"}</span></td>
+                  <td><span className="alias-tag" style={{background:"#eff6ff",color:"#0c4a6e"}}>{item.condition || "—"}</span></td>
+                  <td><span className="alias-tag" style={{background:"#fef3c7",color:"#92400e"}}>{item.parts || "—"}</span></td>
                   <td className="inv-aliases">
                     {item.aliases.length > 0
                       ? item.aliases.map((a, j) => <span key={j} className="alias-tag">{a}</span>)
@@ -208,6 +214,7 @@ function Inventory() {
                     ) : (
                       <span className={`stock-qty stock-${stockLevel(item.quantity)}`}>{item.quantity}</span>
                     )}
+                    
                   </td>
                   <td>{item.unit}</td>
                   <td><span className={`stock-badge stock-badge-${stockLevel(item.quantity)}`}>
@@ -239,6 +246,20 @@ function Inventory() {
                 <select name="category" value={form.category} onChange={handleChange}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
+              </div>
+              <div className="inv-row">
+                <div className="inv-field">
+                  <label>Condition</label>
+                  <select name="condition" value={form.condition} onChange={handleChange}>
+                    {CONDITIONS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="inv-field">
+                  <label>Parts</label>
+                  <select name="parts" value={form.parts} onChange={handleChange}>
+                    {PARTS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="inv-field">
                 <label>Also Known As <span className="inv-hint">(comma separated)</span></label>
