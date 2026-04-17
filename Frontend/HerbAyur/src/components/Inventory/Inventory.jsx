@@ -42,6 +42,12 @@ function Inventory() {
     });
   };
 
+  const preventNegativeNumberInput = (e) => {
+    if (e.key === "-" || e.key === "e" || e.key === "E") {
+      e.preventDefault();
+    }
+  };
+
   // Unit conversion pairs for price auto-calculation
   const UNIT_CONVERSIONS = {
     L:   { smaller: "ml",  factor: 1000 },
@@ -92,6 +98,11 @@ function Inventory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError("");
+    const parsedPrice = Number(form.price);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setError("Price must be a positive number.");
+      return;
+    }
     const payload = {
       name:     form.name.trim(),
       category: form.category,
@@ -99,7 +110,7 @@ function Inventory() {
       parts: form.parts,
       quantity: Number(form.quantity),
       unit:     form.unit,
-      price:    Number(form.price) || 0,
+      price:    parsedPrice,
       aliases:  form.aliases.split(",").map(a => a.trim()).filter(Boolean),
     };
     try {
@@ -142,7 +153,7 @@ function Inventory() {
       <div className="inv-header">
         <div>
           <h2><PackageOpen size={22}/> My Inventory</h2>
-          <p className="inv-sub">Manage your stock. Items auto-decrease when offers are accepted.</p>
+          <p className="inv-sub">Manage your stock. Items are reserved when you confirm supply and restored if the offer is rejected or cancelled.</p>
         </div>
         <button className="inv-add-btn" onClick={openAdd}><Plus size={16}/> Add Item</button>
       </div>
@@ -207,7 +218,7 @@ function Inventory() {
                   <td>
                     {restockId === item._id ? (
                       <div className="restock-inline">
-                        <input type="number" min="1" placeholder="Add qty" value={restockQty} onChange={e => setRestockQty(e.target.value)}/>
+                        <input type="number" min="1" placeholder="Add qty" value={restockQty} onChange={e => setRestockQty(e.target.value)} onKeyDown={preventNegativeNumberInput}/>
                         <button className="inv-icon-btn green" onClick={() => handleRestock(item._id)}><Check size={14}/></button>
                         <button className="inv-icon-btn grey"  onClick={() => { setRestockId(null); setRestockQty(""); }}><X size={14}/></button>
                       </div>
@@ -268,7 +279,7 @@ function Inventory() {
               <div className="inv-row">
                 <div className="inv-field">
                   <label>Quantity</label>
-                  <input type="number" name="quantity" value={form.quantity} onChange={handleChange} min="0" required/>
+                  <input type="number" name="quantity" value={form.quantity} onChange={handleChange} onKeyDown={preventNegativeNumberInput} min="0" required/>
                 </div>
                 <div className="inv-field">
                   <label>Unit</label>
@@ -279,7 +290,7 @@ function Inventory() {
               </div>
               <div className="inv-field">
                 <label>Price per Unit (Rs) <span style={{color:"#dc2626"}}>*</span></label>
-                <input type="number" name="price" value={form.price} onChange={handleChange} min="0.01" step="0.01" placeholder="e.g. 450" required/>
+                <input type="number" name="price" value={form.price} onChange={handleChange} onKeyDown={preventNegativeNumberInput} min="0.01" step="0.01" placeholder="e.g. 450" required/>
                 {getConvertedPrice(form.unit, form.price) && (
                   <span className="inv-price-hint">
                     ≈ {getConvertedPrice(form.unit, form.price)}
