@@ -214,6 +214,7 @@ function Inventory() {
                     ) : (
                       <span className={`stock-qty stock-${stockLevel(item.quantity)}`}>{item.quantity}</span>
                     )}
+                    
                   </td>
                   <td>{item.unit}</td>
                   <td><span className={`stock-badge stock-badge-${stockLevel(item.quantity)}`}>
