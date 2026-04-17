@@ -244,6 +244,8 @@
 .inv-field input:focus,
 .inv-field select:focus { border-color: #22c55e; background: white; }
 
+
+
 .inv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
 .inv-error {
