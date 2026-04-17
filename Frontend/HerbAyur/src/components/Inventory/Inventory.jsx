@@ -153,7 +153,7 @@ function Inventory() {
       <div className="inv-header">
         <div>
           <h2><PackageOpen size={22}/> My Inventory</h2>
-          <p className="inv-sub">Manage your stock. Items auto-decrease when offers are accepted.</p>
+          <p className="inv-sub">Manage your stock. Items are reserved when you confirm supply and restored if the offer is rejected or cancelled.</p>
         </div>
         <button className="inv-add-btn" onClick={openAdd}><Plus size={16}/> Add Item</button>
       </div>

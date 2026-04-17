@@ -140,7 +140,9 @@ function SupplierConfirmation() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError("");
-    const selected = materials.filter(m => m.selected && m.price !== "");
+    const selected = materials.filter(
+      (m) => m.selected && m.inventoryId && m.price !== "" && Number(m.price) > 0
+    );
     if (selected.length === 0) {
       setShowValidation(true);
       setTimeout(() => setShowValidation(false), 5000);
@@ -160,6 +162,7 @@ function SupplierConfirmation() {
             supplyQty: Number(m.quantity), // use requested quantity as supply quantity
             unit:      m.unit,
             price:     Number(m.price),
+            inventoryId: m.inventoryId,
           })),
         }),
       });
@@ -369,7 +372,7 @@ function SupplierConfirmation() {
 
             {showValidation && (
               <div className="theme-validation-message">
-                Please select at least one material and enter a price.
+                Please select at least one material, choose inventory, and enter a valid price.
               </div>
             )}
           </>
