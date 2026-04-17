@@ -51,8 +51,12 @@ router.post("/", auth, async (req, res) => {
   if (req.user.role !== "supplier") return res.status(403).json({ message: "Forbidden" });
   try {
     const { name, category, quantity, unit, price, aliases } = req.body;
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      return res.status(400).json({ message: "Price must be a positive number" });
+    }
     const item = await Inventory.create({
-      supplierId: req.user.id, name, category, quantity, unit, price: price || 0,
+      supplierId: req.user.id, name, category, quantity, unit, price: numericPrice,
       aliases: aliases || [],
     });
     res.status(201).json(item);
@@ -65,10 +69,18 @@ router.post("/", auth, async (req, res) => {
 router.patch("/:id", auth, async (req, res) => {
   if (req.user.role !== "supplier") return res.status(403).json({ message: "Forbidden" });
   try {
+    const updates = { ...req.body };
+    if (Object.prototype.hasOwnProperty.call(updates, "price")) {
+      const numericPrice = Number(updates.price);
+      if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+        return res.status(400).json({ message: "Price must be a positive number" });
+      }
+      updates.price = numericPrice;
+    }
     const item = await Inventory.findOneAndUpdate(
       { _id: req.params.id, supplierId: req.user.id },
-      req.body,
-      { new: true }
+      updates,
+      { new: true, runValidators: true }
     );
     if (!item) return res.status(404).json({ message: "Item not found" });
     res.json(item);

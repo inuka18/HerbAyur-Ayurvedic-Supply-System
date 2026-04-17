@@ -10,7 +10,7 @@ const inventorySchema = new mongoose.Schema(
     aliases:    { type: [String], default: [] },
     quantity:   { type: Number, required: true, min: 0 },
     unit:       { type: String, default: "kg" },
-    price:      { type: Number, default: 0 }, // price per unit
+    price:      { type: Number, required: true, min: 0.01 }, // price per unit
   },
   { timestamps: true }
 );
