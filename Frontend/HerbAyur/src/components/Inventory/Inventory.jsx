@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, RefreshCw, PackageOpen, X, Check, Edit2 } from "lucide-react";
 import API_BASE from "../../api";
 import "./Inventory.css";
-import { CATEGORIES, ALL_UNITS } from "../../materialOptions";
+import { CATEGORIES, CONDITIONS, PARTS, getUnits, normalizeCategory } from "../../materialOptions";
 
 const token = () => localStorage.getItem("token");
 
@@ -13,7 +13,7 @@ function Inventory() {
   const [editItem, setEditItem]   = useState(null);
   const [restockId, setRestockId] = useState(null);
   const [restockQty, setRestockQty] = useState("");
-  const [form, setForm] = useState({ name: "", category: "Roots", quantity: "", unit: "kg", price: "", aliases: "" });
+  const [form, setForm] = useState({ name: "", category: "Raw Herb", condition: "Fresh", parts: "Whole", quantity: "", unit: "kg", price: "", aliases: "" });
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
 
@@ -29,7 +29,24 @@ function Inventory() {
 
   useEffect(() => { fetchItems(); }, []);
 
-  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => {
+      if (name !== "category") return { ...prev, [name]: value };
+      const nextUnits = getUnits(value);
+      return {
+        ...prev,
+        category: value,
+        unit: nextUnits.includes(prev.unit) ? prev.unit : nextUnits[0],
+      };
+    });
+  };
+
+  const preventNegativeNumberInput = (e) => {
+    if (e.key === "-" || e.key === "e" || e.key === "E") {
+      e.preventDefault();
+    }
+  };
 
   // Unit conversion pairs for price auto-calculation
   const UNIT_CONVERSIONS = {
@@ -58,24 +75,42 @@ function Inventory() {
 
   const openAdd = () => {
     setEditItem(null);
-    setForm({ name: "", category: "Roots", quantity: "", unit: "kg", price: "", aliases: "" });
+    setForm({ name: "", category: "Raw Herb", condition: "Fresh", parts: "Whole", quantity: "", unit: "kg", price: "", aliases: "" });
     setError(""); setSuccess(""); setShowForm(true);
   };
 
   const openEdit = (item) => {
+    const itemCategory = normalizeCategory(item.category);
+    const allowedUnits = getUnits(itemCategory);
     setEditItem(item);
-    setForm({ name: item.name, category: item.category || "Roots", quantity: item.quantity, unit: item.unit, price: item.price || "", aliases: item.aliases.join(", ") });
+    setForm({
+      name: item.name,
+      category: itemCategory,
+      condition: item.condition || "Fresh",
+      parts: item.parts || "Whole",
+      quantity: item.quantity,
+      unit: allowedUnits.includes(item.unit) ? item.unit : allowedUnits[0],
+      price: item.price || "",
+      aliases: item.aliases.join(", "),
+    });
     setError(""); setSuccess(""); setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError("");
+    const parsedPrice = Number(form.price);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setError("Price must be a positive number.");
+      return;
+    }
     const payload = {
       name:     form.name.trim(),
       category: form.category,
+      condition: form.condition,
+      parts: form.parts,
       quantity: Number(form.quantity),
       unit:     form.unit,
-      price:    Number(form.price) || 0,
+      price:    parsedPrice,
       aliases:  form.aliases.split(",").map(a => a.trim()).filter(Boolean),
     };
     try {
@@ -111,13 +146,14 @@ function Inventory() {
   };
 
   const stockLevel = (qty) => qty === 0 ? "out" : qty <= 5 ? "low" : qty <= 20 ? "medium" : "good";
+  const availableUnits = getUnits(form.category);
 
   return (
     <div className="inv-page">
       <div className="inv-header">
         <div>
           <h2><PackageOpen size={22}/> My Inventory</h2>
-          <p className="inv-sub">Manage your stock. Items auto-decrease when offers are accepted.</p>
+          <p className="inv-sub">Manage your stock. Items are reserved when you confirm supply and restored if the offer is rejected or cancelled.</p>
         </div>
         <button className="inv-add-btn" onClick={openAdd}><Plus size={16}/> Add Item</button>
       </div>
@@ -148,7 +184,7 @@ function Inventory() {
           <table className="inv-table">
             <thead>
               <tr>
-                <th>#</th><th>Item Name</th><th>Category</th><th>Also Known As</th>
+                <th>#</th><th>Item Name</th><th>Category</th><th>Condition</th><th>Parts</th><th>Also Known As</th>
                 <th>Price/Unit</th><th>Stock</th><th>Unit</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
@@ -158,6 +194,8 @@ function Inventory() {
                   <td>{i + 1}</td>
                   <td className="inv-name">{item.name}</td>
                   <td><span className="alias-tag" style={{background:"#f0fdf4",color:"#166534"}}>{item.category || "—"}</span></td>
+                  <td><span className="alias-tag" style={{background:"#eff6ff",color:"#0c4a6e"}}>{item.condition || "—"}</span></td>
+                  <td><span className="alias-tag" style={{background:"#fef3c7",color:"#92400e"}}>{item.parts || "—"}</span></td>
                   <td className="inv-aliases">
                     {item.aliases.length > 0
                       ? item.aliases.map((a, j) => <span key={j} className="alias-tag">{a}</span>)
@@ -180,13 +218,14 @@ function Inventory() {
                   <td>
                     {restockId === item._id ? (
                       <div className="restock-inline">
-                        <input type="number" min="1" placeholder="Add qty" value={restockQty} onChange={e => setRestockQty(e.target.value)}/>
+                        <input type="number" min="1" placeholder="Add qty" value={restockQty} onChange={e => setRestockQty(e.target.value)} onKeyDown={preventNegativeNumberInput}/>
                         <button className="inv-icon-btn green" onClick={() => handleRestock(item._id)}><Check size={14}/></button>
                         <button className="inv-icon-btn grey"  onClick={() => { setRestockId(null); setRestockQty(""); }}><X size={14}/></button>
                       </div>
                     ) : (
                       <span className={`stock-qty stock-${stockLevel(item.quantity)}`}>{item.quantity}</span>
                     )}
+                    
                   </td>
                   <td>{item.unit}</td>
                   <td><span className={`stock-badge stock-badge-${stockLevel(item.quantity)}`}>
@@ -219,6 +258,20 @@ function Inventory() {
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
+              <div className="inv-row">
+                <div className="inv-field">
+                  <label>Condition</label>
+                  <select name="condition" value={form.condition} onChange={handleChange}>
+                    {CONDITIONS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="inv-field">
+                  <label>Parts</label>
+                  <select name="parts" value={form.parts} onChange={handleChange}>
+                    {PARTS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
               <div className="inv-field">
                 <label>Also Known As <span className="inv-hint">(comma separated)</span></label>
                 <input name="aliases" value={form.aliases} onChange={handleChange} placeholder="Iguru, Inji, Zanjabil"/>
@@ -226,18 +279,18 @@ function Inventory() {
               <div className="inv-row">
                 <div className="inv-field">
                   <label>Quantity</label>
-                  <input type="number" name="quantity" value={form.quantity} onChange={handleChange} min="0" required/>
+                  <input type="number" name="quantity" value={form.quantity} onChange={handleChange} onKeyDown={preventNegativeNumberInput} min="0" required/>
                 </div>
                 <div className="inv-field">
                   <label>Unit</label>
                   <select name="unit" value={form.unit} onChange={handleChange}>
-                    {ALL_UNITS.map(u => <option key={u}>{u}</option>)}
+                    {availableUnits.map(u => <option key={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
               <div className="inv-field">
                 <label>Price per Unit (Rs) <span style={{color:"#dc2626"}}>*</span></label>
-                <input type="number" name="price" value={form.price} onChange={handleChange} min="0.01" step="0.01" placeholder="e.g. 450" required/>
+                <input type="number" name="price" value={form.price} onChange={handleChange} onKeyDown={preventNegativeNumberInput} min="0.01" step="0.01" placeholder="e.g. 450" required/>
                 {getConvertedPrice(form.unit, form.price) && (
                   <span className="inv-price-hint">
                     ≈ {getConvertedPrice(form.unit, form.price)}

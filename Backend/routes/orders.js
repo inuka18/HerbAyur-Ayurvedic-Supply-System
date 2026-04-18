@@ -4,6 +4,7 @@ const Offer        = require("../models/Offer");
 const Request      = require("../models/Request");
 const Notification = require("../models/Notification");
 const auth         = require("../middleware/auth");
+const { releaseOfferReservation } = require("../utils/offerStock");
 
 // POST — customer creates order after payment
 router.post("/", auth, async (req, res) => {
@@ -63,7 +64,9 @@ router.post("/", auth, async (req, res) => {
                            overlapping.length > 0;
 
       if (shouldReject) {
-        await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+        sibling.status = "Rejected";
+        await sibling.save();
+        await releaseOfferReservation(sibling);
         const reason = offer.supplyType === "Whole"
           ? `the customer accepted a whole-list offer from another supplier`
           : `the customer accepted another supplier for: ${overlapping.map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(", ")}`;

@@ -3,6 +3,7 @@ const Request = require("../models/Request");
 const Offer   = require("../models/Offer");
 const Notification = require("../models/Notification");
 const auth = require("../middleware/auth");
+const { releaseOfferReservation } = require("../utils/offerStock");
 
 // GET all requests (admin/supplier)
 router.get("/", async (req, res) => {
@@ -68,10 +69,18 @@ router.delete("/:id", auth, async (req, res) => {
     if ((request.coveredItems || []).length > 0)
       return res.status(400).json({ message: "Cannot cancel — orders have already been placed for some items in this request." });
 
+    const offers = await Offer.find({ requestId: req.params.id });
+    for (const offer of offers) {
+      if (offer.status !== "Rejected") {
+        offer.status = "Rejected";
+        await offer.save();
+      }
+      await releaseOfferReservation(offer);
+    }
+
     await Request.findByIdAndDelete(req.params.id);
 
     // Notify all suppliers who submitted offers for this request
-    const offers = await Offer.find({ requestId: req.params.id });
     const notifiedSuppliers = new Set();
     for (const offer of offers) {
       const sid = String(offer.supplierId);
