@@ -4,6 +4,7 @@ import "./Reports.css";
 // Admin reports
 import AdminSupplierReport from "./Admin/AdminSupplierReport";
 import AdminCustomerReport from "./Admin/AdminCustomerReport";
+import AdminOrderReport    from "./Admin/AdminOrderReport";
 import AdminRequestReport  from "./Admin/AdminRequestReport";
 import AdminMessageReport  from "./Admin/AdminMessageReport";
 
@@ -21,6 +22,7 @@ import CustomerRequestReport from "./Customer/CustomerRequestReport";
 const ADMIN_TABS = [
   { id: "suppliers", label: "🏭 Supplier Management",     component: <AdminSupplierReport/> },
   { id: "customers", label: "👤 Customer Management",     component: <AdminCustomerReport/> },
+  { id: "orders",    label: "🛒 Orders & Payments",       component: <AdminOrderReport/> },
   { id: "requests",  label: "📋 Requirement Requests",    component: <AdminRequestReport/> },
   { id: "messages",  label: "✉️ Messages",                component: <AdminMessageReport/> },
 ];
