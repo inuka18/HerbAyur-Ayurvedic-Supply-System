@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import API_BASE from "../../../api";
-import { printReport, RptHeader, RptSection, RptStats } from "../reportUtils";
+import { printReport, RptHeader, RptSection, RptStats, inDateRange, getDateRangeLabel } from "../reportUtils";
 import "../Reports.css";
 
 export default function CustomerRequestReport() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const ref = useRef();
   const token = localStorage.getItem("token");
   const user  = JSON.parse(localStorage.getItem("user") || "{}");
@@ -23,8 +26,24 @@ export default function CustomerRequestReport() {
 
   if (loading) return <div className="rpt-loading">Loading...</div>;
 
-  const completed = requests.filter(r => r.fullyCompleted);
-  const active    = requests.filter(r => !r.fullyCompleted);
+  const getStatus = (request) => {
+    if (request.fullyCompleted) return "completed";
+    if ((request.coveredItems || []).length > 0) return "partial";
+    return "pending";
+  };
+
+  const filteredRequests = requests.filter((r) => {
+    const status = getStatus(r);
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && !r.fullyCompleted) ||
+      status === statusFilter;
+    const matchesDate = (!fromDate && !toDate) || inDateRange(r.requiredDate || r.createdAt, fromDate, toDate);
+    return matchesStatus && matchesDate;
+  });
+
+  const completed = filteredRequests.filter(r => r.fullyCompleted);
+  const active    = filteredRequests.filter(r => !r.fullyCompleted);
   const partial   = active.filter(r => (r.coveredItems || []).length > 0);
   const noOrders  = active.filter(r => (r.coveredItems || []).length === 0);
 
@@ -37,11 +56,34 @@ export default function CustomerRequestReport() {
         <h2 className="rpt-page-title">📋 Requirement Request Report</h2>
         <button className="rpt-download-btn" onClick={() => printReport(ref, "Requirement Request Report")}>⬇ Download PDF</button>
       </div>
+      <div className="rpt-filters">
+        <div className="rpt-filter-field">
+          <label>Status</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="partial">Partial</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+        <div className="rpt-filter-field">
+          <label>From Date</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        </div>
+        <div className="rpt-filter-field">
+          <label>To Date</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </div>
+        <button className="rpt-filter-reset" onClick={() => { setStatusFilter("all"); setFromDate(""); setToDate(""); }}>
+          Reset
+        </button>
+      </div>
       <div ref={ref}>
-        <RptHeader title="Requirement Request Report" meta={`Customer: ${user.name}`}/>
+        <RptHeader title="Requirement Request Report" meta={`Customer: ${user.name} · Status: ${statusFilter} · Date: ${getDateRangeLabel(fromDate, toDate)}`}/>
         <RptSection title="📊 Summary">
           <RptStats stats={[
-            { label: "Total Requests",    value: requests.length },
+            { label: "Total Requests",    value: filteredRequests.length },
             { label: "Active",            value: active.length },
             { label: "Fully Completed",   value: completed.length },
             { label: "Partially Ordered", value: partial.length },

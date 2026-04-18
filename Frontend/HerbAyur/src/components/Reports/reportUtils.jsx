@@ -83,3 +83,30 @@ export function badge(status) {
   };
   return map[status] || "bb";
 }
+
+export function inDateRange(value, fromDate, toDate) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  if (fromDate) {
+    const from = new Date(fromDate);
+    from.setHours(0, 0, 0, 0);
+    if (date < from) return false;
+  }
+
+  if (toDate) {
+    const to = new Date(toDate);
+    to.setHours(23, 59, 59, 999);
+    if (date > to) return false;
+  }
+
+  return true;
+}
+
+export function getDateRangeLabel(fromDate, toDate) {
+  if (!fromDate && !toDate) return "All dates";
+  if (fromDate && toDate) return `${fromDate} to ${toDate}`;
+  if (fromDate) return `From ${fromDate}`;
+  return `Up to ${toDate}`;
+}
