@@ -30,23 +30,23 @@ function useCountUp(target, duration = 1800) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ suppliers: 0, customers: 0, requests: 0 });
+  const [stats, setStats] = useState({ verifiedSuppliers: 0, activeCustomers: 0, requests: 0 });
 
   useEffect(() => {
     Promise.all([
       fetch(`${API_BASE}/requests`).then(r => r.json()),
-      fetch(`${API_BASE}/auth/users`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      }).then(r => r.json()).catch(() => []),
-    ]).then(([requests, users]) => {
-      const suppliers = Array.isArray(users) ? users.filter(u => u.role === 'supplier').length : 0;
-      const customers = Array.isArray(users) ? users.filter(u => u.role === 'customer').length : 0;
-      setStats({ suppliers, customers, requests: Array.isArray(requests) ? requests.length : 0 });
+      fetch(`${API_BASE}/auth/public-stats`).then(r => r.json()).catch(() => ({})),
+    ]).then(([requests, userStats]) => {
+      setStats({
+        verifiedSuppliers: Number(userStats?.verifiedSuppliers) || 0,
+        activeCustomers: Number(userStats?.activeCustomers) || 0,
+        requests: Array.isArray(requests) ? requests.length : 0
+      });
     }).catch(() => {});
   }, []);
 
-  const suppCount = useCountUp(stats.suppliers);
-  const custCount = useCountUp(stats.customers);
+  const suppCount = useCountUp(stats.verifiedSuppliers);
+  const custCount = useCountUp(stats.activeCustomers);
   const reqCount  = useCountUp(stats.requests);
 
   return (
