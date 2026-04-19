@@ -36,6 +36,19 @@ router.get("/users", auth, async (req, res) => {
   res.json(users);
 });
 
+// GET public summary counts for home hero stats
+router.get("/public-stats", async (req, res) => {
+  try {
+    const [verifiedSuppliers, activeCustomers] = await Promise.all([
+      User.countDocuments({ role: "supplier", status: "approved" }),
+      User.countDocuments({ role: "customer" }),
+    ]);
+    res.json({ verifiedSuppliers, activeCustomers });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // CHECK availability (email / companyName)
 router.post("/check-availability", async (req, res) => {
   try {
