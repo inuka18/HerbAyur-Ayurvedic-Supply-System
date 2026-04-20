@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import API_BASE from "../../../api";
-import { printReport, RptHeader, RptSection, RptStats, badge } from "../reportUtils";
+import { printReport, RptHeader, RptSection, RptStats, badge, inDateRange, getDateRangeLabel } from "../reportUtils";
 import "../Reports.css";
 
 export default function SupplierOfferReport() {
   const [offers, setOffers]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const ref   = useRef();
   const token = localStorage.getItem("token");
   const user  = JSON.parse(localStorage.getItem("user") || "{}");
@@ -20,9 +24,16 @@ export default function SupplierOfferReport() {
 
   if (loading) return <div className="rpt-loading">Loading...</div>;
 
-  const accepted = offers.filter(o => o.status === "Accepted");
-  const pending  = offers.filter(o => o.status === "Pending");
-  const rejected = offers.filter(o => o.status === "Rejected");
+  const filteredOffers = offers.filter((o) => {
+    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    const matchesType = typeFilter === "all" || o.supplyType === typeFilter;
+    const matchesDate = (!fromDate && !toDate) || inDateRange(o.createdAt, fromDate, toDate);
+    return matchesStatus && matchesType && matchesDate;
+  });
+
+  const accepted = filteredOffers.filter(o => o.status === "Accepted");
+  const pending  = filteredOffers.filter(o => o.status === "Pending");
+  const rejected = filteredOffers.filter(o => o.status === "Rejected");
 
   const renderTable = (list, emptyMsg) => (
     list.length === 0
@@ -39,7 +50,7 @@ export default function SupplierOfferReport() {
                   <td>{i + 1}</td>
                   <td>{o.requestId?.listName || "—"}</td>
                   <td>{o.requestId?.customer?.name || "—"}</td>
-                  <td><span className={`badge ${o.supplyType === "Whole" ? "bg" : o.supplyType === "Partial" ? "ba" : "bb"}`}>{o.supplyType}</span></td>
+                  <td><span className={`badge ${o.supplyType === "Whole" ? "bg" : o.supplyType === "Partial" ? "ba" : o.supplyType === "Item" ? "bb" : "bb"}`}>{o.supplyType}</span></td>
                   <td>{(o.items || []).map(it => `${it.name} ×${it.supplyQty}${it.unit}`).join(", ")}</td>
                   <td>Rs {total.toLocaleString()}</td>
                   <td><span className={`badge ${badge(o.status)}`}>{o.status}</span></td>
@@ -57,11 +68,42 @@ export default function SupplierOfferReport() {
         <h2 className="rpt-page-title">📨 Offer Report</h2>
         <button className="rpt-download-btn" onClick={() => printReport(ref, "Offer Report")}>⬇ Download PDF</button>
       </div>
+      <div className="rpt-filters">
+        <div className="rpt-filter-field">
+          <label>Status</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Pending">Pending</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="rpt-filter-field">
+          <label>Supply Type</label>
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="Whole">Whole</option>
+            <option value="Partial">Partial</option>
+            <option value="Item">Item</option>
+          </select>
+        </div>
+        <div className="rpt-filter-field">
+          <label>From Date</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        </div>
+        <div className="rpt-filter-field">
+          <label>To Date</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </div>
+        <button className="rpt-filter-reset" onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setFromDate(""); setToDate(""); }}>
+          Reset
+        </button>
+      </div>
       <div ref={ref}>
-        <RptHeader title="Requirement Request Offer Report" meta={`Supplier: ${user.name}`}/>
+        <RptHeader title="Requirement Request Offer Report" meta={`Supplier: ${user.name} · Status: ${statusFilter} · Type: ${typeFilter} · Date: ${getDateRangeLabel(fromDate, toDate)}`}/>
         <RptSection title="📊 Summary">
           <RptStats stats={[
-            { label: "Total Offers",    value: offers.length },
+            { label: "Total Offers",    value: filteredOffers.length },
             { label: "Accepted",        value: accepted.length },
             { label: "Pending",         value: pending.length },
             { label: "Rejected",        value: rejected.length },

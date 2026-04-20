@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import API_BASE from "../../../api";
-import { printReport, RptHeader, RptSection, RptStats, badge } from "../reportUtils";
+import { printReport, RptHeader, RptSection, RptStats, badge, inDateRange, getDateRangeLabel } from "../reportUtils";
 import "../Reports.css";
 
 export default function AdminSupplierReport() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const ref = useRef();
   const token = localStorage.getItem("token");
 
@@ -18,13 +21,19 @@ export default function AdminSupplierReport() {
 
   if (loading) return <div className="rpt-loading">Loading...</div>;
 
-  const approved  = suppliers.filter(s => s.status === "approved").length;
-  const pending   = suppliers.filter(s => s.status === "pending").length;
-  const rejected  = suppliers.filter(s => s.status === "rejected").length;
-  const withPending = suppliers.filter(s => s.pendingChanges?.submittedAt).length;
+  const filteredSuppliers = suppliers.filter((s) => {
+    const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+    const matchesDate = (!fromDate && !toDate) || inDateRange(s.createdAt, fromDate, toDate);
+    return matchesStatus && matchesDate;
+  });
+
+  const approved  = filteredSuppliers.filter(s => s.status === "approved").length;
+  const pending   = filteredSuppliers.filter(s => s.status === "pending").length;
+  const rejected  = filteredSuppliers.filter(s => s.status === "rejected").length;
+  const withPending = filteredSuppliers.filter(s => s.pendingChanges?.submittedAt).length;
   // New this month
   const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
-  const newThisMonth = suppliers.filter(s => new Date(s.createdAt) >= thisMonth).length;
+  const newThisMonth = filteredSuppliers.filter(s => new Date(s.createdAt) >= thisMonth).length;
 
   return (
     <div className="rpt-page">
@@ -32,11 +41,33 @@ export default function AdminSupplierReport() {
         <h2 className="rpt-page-title">🏭 Supplier Management Report</h2>
         <button className="rpt-download-btn" onClick={() => printReport(ref, "Supplier Management Report")}>⬇ Download PDF</button>
       </div>
+      <div className="rpt-filters">
+        <div className="rpt-filter-field">
+          <label>Status</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="rpt-filter-field">
+          <label>From Date</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        </div>
+        <div className="rpt-filter-field">
+          <label>To Date</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </div>
+        <button className="rpt-filter-reset" onClick={() => { setStatusFilter("all"); setFromDate(""); setToDate(""); }}>
+          Reset
+        </button>
+      </div>
       <div ref={ref}>
-        <RptHeader title="Supplier Management Report" meta="Admin"/>
+        <RptHeader title="Supplier Management Report" meta={`Admin · Status: ${statusFilter} · Date: ${getDateRangeLabel(fromDate, toDate)}`}/>
         <RptSection title="📊 Summary">
           <RptStats stats={[
-            { label: "Total Suppliers",    value: suppliers.length },
+            { label: "Total Suppliers",    value: filteredSuppliers.length },
             { label: "Approved",           value: approved },
             { label: "Pending Approval",   value: pending },
             { label: "Rejected",           value: rejected },
@@ -48,7 +79,7 @@ export default function AdminSupplierReport() {
           <table>
             <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Status</th><th>Registered</th></tr></thead>
             <tbody>
-              {[...suppliers].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map((s, i) => (
+              {[...filteredSuppliers].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map((s, i) => (
                 <tr key={s._id}>
                   <td>{i+1}</td>
                   <td>{s.firstName} {s.lastName}</td>
