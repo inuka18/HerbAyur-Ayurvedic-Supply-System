@@ -45,7 +45,9 @@ function ReceiptModal({ order, onClose }) {
       .badge{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
       .footer{text-align:center;margin-top:28px;color:#9ca3af;font-size:11px;line-height:1.6}
     </style></head><body>${ref.current.innerHTML}</body></html>`);
-    win.document.close(); win.focus(); win.print(); win.close();
+    win.document.close();
+    win.focus();
+    win.onload = () => { win.print(); win.close(); };
   };
 
   return (
@@ -222,7 +224,8 @@ export default function CustomerOrders() {
             <button className="co-confirm-btn" onClick={() => confirmDelivery(o._id)} disabled={confirmingId === o._id}>
               <CheckCircle2 size={15}/>
               {confirmingId === o._id ? "Confirming..." : "Confirm Received Order"}
-            </button>
+          
+          </button>
           </div>
         )}
 

@@ -17,6 +17,7 @@ app.use("/api/inventory",     require("./routes/inventory"));
 app.use("/api/orders",        require("./routes/orders"));
 app.use("/api/contact",       require("./routes/contact"));
 app.use("/api/notifications", require("./routes/notifications"));
+app.use("/api/predictions",   require("./routes/predictions"));
 
 mongoose
   .connect(process.env.MONGO_URI)

@@ -16,6 +16,8 @@ export default function Profile() {
   const [success, setSuccess]   = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const [deleteError, setDeleteError] = useState("");
+
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -27,17 +29,47 @@ export default function Profile() {
   }, []);
 
   const companyNameChanged = profile?.role === "supplier" && form.companyName !== (profile?.companyName || "");
+  const hasPendingCompanyChange = profile?.role === "supplier" && !!profile?.pendingChanges?.submittedAt;
+
+  const nameKeyDown = (e) => {
+    if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key))
+      e.preventDefault();
+  };
+
+  const phoneKeyDown = (e) => {
+    if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key))
+      e.preventDefault();
+  };
+
+  const validateProfile = () => {
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(form.phone)) {
+      setError("Contact number must be 10 digits and start with 0.");
+      return false;
+    }
+    return true;
+  };
 
   const handleSave = async () => {
+    if (!validateProfile()) return;
     if (companyNameChanged && !certFile) {
       setError("Please upload a new certification when changing the company name.");
+      return;
+    }
+    if (hasPendingCompanyChange && companyNameChanged) {
+      setError("You already have a pending company name change awaiting admin approval.");
       return;
     }
     setSaving(true); setError(""); setSuccess("");
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      if (certFile) fd.append("certification", certFile);
+      // Only send companyName if it actually changed
+      const { companyName, ...basicFields } = form;
+      Object.entries(basicFields).forEach(([k, v]) => fd.append(k, v));
+      if (companyNameChanged) {
+        fd.append("companyName", companyName);
+        if (certFile) fd.append("certification", certFile);
+      }
 
       const res  = await fetch(`${API_BASE}/auth/profile`, {
         method:  "PATCH",
@@ -48,9 +80,9 @@ export default function Profile() {
       if (!res.ok) { setError(data.message); return; }
       setProfile(data);
       setEditing(false);
-      const needsApproval = profile.role === "supplier" && (form.companyName !== profile.companyName || certFile);
-      setSuccess(needsApproval
-        ? "Company/certification changes submitted! Awaiting admin approval."
+      setCertFile(null);
+      setSuccess(companyNameChanged
+        ? "Company name change submitted! Awaiting admin approval. You cannot access system activities until approved."
         : "Profile updated successfully!");
     } catch { setError("Something went wrong."); }
     finally { setSaving(false); }
@@ -58,11 +90,13 @@ export default function Profile() {
 
   const handleDelete = async () => {
     try {
-      await fetch(`${API_BASE}/auth/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const res  = await fetch(`${API_BASE}/auth/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) { setDeleteError(data.message); return; }
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       navigate("/");
-    } catch { setError("Failed to delete account."); }
+    } catch { setDeleteError("Failed to delete account. Please try again."); }
   };
 
   if (loading) return <div className="prof-page"><p className="prof-loading">Loading profile...</p></div>;
@@ -86,25 +120,30 @@ export default function Profile() {
           {editing ? (
             <>
               <div className="prof-row">
-                <div className="prof-field"><label>First Name</label><input value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))}/></div>
-                <div className="prof-field"><label>Last Name</label><input value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))}/></div>
+                <div className="prof-field"><label>First Name</label><input value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))} onKeyDown={nameKeyDown}/></div>
+                <div className="prof-field"><label>Last Name</label><input value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))} onKeyDown={nameKeyDown}/></div>
               </div>
-              <div className="prof-field"><label><Phone size={13}/> Phone</label><input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))}/></div>
+              <div className="prof-field"><label><Phone size={13}/> Phone</label><input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} onKeyDown={phoneKeyDown} maxLength={10} inputMode="numeric" placeholder="07XXXXXXXX"/></div>
               <div className="prof-field"><label><MapPin size={13}/> Address</label><input value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))}/></div>
               {profile.role === "supplier" && (
                 <>
-                  <div className="prof-field"><label><Building2 size={13}/> Company Name</label><input value={form.companyName} onChange={e => setForm(p => ({...p, companyName: e.target.value}))}/></div>
-                  <div className="prof-field">
-                    <label>
-                      <FileText size={13}/> Certification {companyNameChanged && <span style={{color:"#dc2626"}}>* required</span>}
-                    </label>
-                    <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setCertFile(e.target.files[0])}/>
-                    {certFile && <span className="prof-filename">📄 {certFile.name}</span>}
-                    {companyNameChanged && !certFile && (
-                      <span style={{fontSize:"0.78rem",color:"#dc2626",marginTop:3}}>⚠ A new certification is required when changing company name.</span>
-                    )}
-                  </div>
-                  <div className="prof-note">⚠ Changing company name or certification requires admin re-approval.</div>
+                  <div className="prof-field"><label><Building2 size={13}/> Company Name</label><input value={form.companyName} onChange={e => setForm(p => ({...p, companyName: e.target.value}))} disabled={hasPendingCompanyChange}/></div>
+                  {hasPendingCompanyChange && (
+                    <div className="prof-pending-banner">⏳ A company name change is pending admin approval. You cannot make further company changes or access system activities until it is reviewed.</div>
+                  )}
+                  {companyNameChanged && (
+                    <>
+                      <div className="prof-field">
+                        <label><FileText size={13}/> New Certification <span style={{color:"#dc2626"}}>* required</span></label>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setCertFile(e.target.files[0])}/>
+                        {certFile && <span className="prof-filename">📄 {certFile.name}</span>}
+                        {!certFile && (
+                          <span style={{fontSize:"0.78rem",color:"#dc2626",marginTop:3}}>⚠ A new certification is required when changing company name.</span>
+                        )}
+                      </div>
+                      <div className="prof-note">⚠ Changing company name requires admin re-approval. You cannot access system activities until approved.</div>
+                    </>
+                  )}
                 </>
               )}
               <div className="prof-actions">
@@ -140,9 +179,10 @@ export default function Profile() {
           <div className="prof-confirm-modal">
             <h3>⚠ Delete Account</h3>
             <p>Are you sure? This action cannot be undone.</p>
+            {deleteError && <div className="prof-error">⚠ {deleteError}</div>}
             <div className="prof-actions">
               <button className="prof-delete-btn" onClick={handleDelete}>Yes, Delete</button>
-              <button className="prof-cancel-btn" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              <button className="prof-cancel-btn" onClick={() => { setConfirmDelete(false); setDeleteError(""); }}>Cancel</button>
             </div>
           </div>
         </div>

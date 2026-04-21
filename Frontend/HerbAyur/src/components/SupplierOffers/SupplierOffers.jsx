@@ -496,6 +496,8 @@ export default function SupplierOffers() {
         <div className="sm-stat">
           <span className="sm-stat-num">{allOrders.length}</span>
           <span className="sm-stat-label">Orders Placed</span>
+      
+      
         </div>
       </div>
 

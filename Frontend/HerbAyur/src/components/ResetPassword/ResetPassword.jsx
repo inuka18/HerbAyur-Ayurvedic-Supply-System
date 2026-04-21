@@ -18,9 +18,9 @@ function ResetPassword() {
     e.preventDefault();
     setError(""); setSuccess("");
     if (form.newPassword !== form.confirmPassword)
-      return setError("Passwords do not match");
-    if (form.newPassword.length < 6)
-      return setError("Password must be at least 6 characters");
+      return setError("Passwords do not match.");
+    if (form.newPassword.length < 8 || !/[A-Z]/.test(form.newPassword) || !/[0-9]/.test(form.newPassword))
+      return setError("Password must be at least 8 characters, include an uppercase letter and a number.");
 
     setLoading(true);
     try {
@@ -64,7 +64,7 @@ function ResetPassword() {
           <div className="auth-group">
             <label><ShieldCheck size={14}/> New Password</label>
             <input type="password" name="newPassword" value={form.newPassword}
-              onChange={handleChange} placeholder="••••••••" required />
+              onChange={handleChange} placeholder="Min 8 chars, 1 uppercase, 1 number" required />
           </div>
 
           <div className="auth-group">

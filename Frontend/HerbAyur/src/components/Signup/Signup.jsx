@@ -145,11 +145,11 @@ function Signup() {
           <div className="auth-row">
             <div className="auth-group">
               <label><User size={14}/> First Name</label>
-              <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Renuka" required />
+              <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Enter first name" required onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }} />
             </div>
             <div className="auth-group">
               <label><User size={14}/> Last Name</label>
-              <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Jeevani" required />
+              <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Enter last name" required onKeyDown={e => { if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault(); }} />
             </div>
           </div>
 
@@ -171,7 +171,7 @@ function Signup() {
 
           <div className="auth-group">
             <label><MapPin size={14}/> Address</label>
-            <input name="address" value={form.address} onChange={handleChange} placeholder="Galkanda, Sri Lanka" required />
+            <input name="address" value={form.address} onChange={handleChange} placeholder="Address" required />
           </div>
 
           {/* SUPPLIER EXTRA FIELDS */}

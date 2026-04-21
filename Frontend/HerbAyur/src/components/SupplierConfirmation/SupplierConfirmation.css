@@ -84,6 +84,14 @@
   padding: 7px 14px;
   border-radius: 20px;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-select-all:disabled {
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* table */

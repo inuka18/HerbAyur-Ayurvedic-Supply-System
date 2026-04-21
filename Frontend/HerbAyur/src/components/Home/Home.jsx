@@ -30,50 +30,60 @@ function useCountUp(target, duration = 1800) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ suppliers: 0, customers: 0, requests: 0 });
+  const [stats, setStats] = useState({ verifiedSuppliers: 0, activeCustomers: 0, requests: 0 });
 
   useEffect(() => {
     Promise.all([
       fetch(`${API_BASE}/requests`).then(r => r.json()),
-      fetch(`${API_BASE}/auth/users`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      }).then(r => r.json()).catch(() => []),
-    ]).then(([requests, users]) => {
-      const suppliers = Array.isArray(users) ? users.filter(u => u.role === 'supplier').length : 0;
-      const customers = Array.isArray(users) ? users.filter(u => u.role === 'customer').length : 0;
-      setStats({ suppliers, customers, requests: Array.isArray(requests) ? requests.length : 0 });
+      fetch(`${API_BASE}/auth/public-stats`).then(r => r.json()).catch(() => ({})),
+    ]).then(([requests, userStats]) => {
+      setStats({
+        verifiedSuppliers: Number(userStats?.verifiedSuppliers) || 0,
+        activeCustomers: Number(userStats?.activeCustomers) || 0,
+        requests: Array.isArray(requests) ? requests.length : 0
+      });
     }).catch(() => {});
   }, []);
 
-  const suppCount = useCountUp(stats.suppliers);
-  const custCount = useCountUp(stats.customers);
+  const suppCount = useCountUp(stats.verifiedSuppliers);
+  const custCount = useCountUp(stats.activeCustomers);
   const reqCount  = useCountUp(stats.requests);
 
   return (
     <div className="ayur-home">
 
       {/* ── HERO ── */}
-      <section className="hero-v2">
+       <section className="hero-v2">
+
         <div className="hero-v2-bg">
           <div className="hero-blob hero-blob1" />
           <div className="hero-blob hero-blob2" />
-          <div className="hero-particles">
-            {['🌿','🌾','🌸','🫚','🍃','💎'].map((e,i) => (
-              <span key={i} className={`hero-particle hp${i+1}`}>{e}</span>
-            ))}
-          </div>
         </div>
 
         <div className="hero-v2-inner">
+
+          {/* LEFT */}
+          
           <div className="hero-v2-left">
+             {/* FLOAT CARD */}
+            <div className="hero-card-float">
+              <div className="hcf-icon">🌿</div>
+              <div>
+                <div className="hcf-title">Ayurvedic Marketplace</div>
+                <div className="hcf-sub">Connecting nature & business</div>
+              </div>
+            </div>
             <div className="hero-tag">🌱 Sri Lanka's #1 Ayurvedic Platform</div>
+
             <h1 className="hero-v2-title">
               Source <span className="hero-highlight">Verified</span><br/>
               Ayurvedic Raw<br/>Materials
             </h1>
+
             <p className="hero-v2-sub">
               Connect directly with trusted suppliers across Sri Lanka. Post requirements, receive offers, and grow your Ayurvedic business.
             </p>
+
             <div className="hero-v2-actions">
               <button className="hero-btn-primary" onClick={() => navigate('/RequestForm')}>
                 📋 Post Requirement
@@ -84,29 +94,18 @@ export default function Home() {
             </div>
           </div>
 
+          {/* RIGHT */}
           <div className="hero-v2-right">
-            <div className="hero-card-float">
-              <div className="hcf-icon">🌿</div>
-              <div>
-                <div className="hcf-title">Ayurvedic Marketplace</div>
-                <div className="hcf-sub">Connecting nature & business</div>
-              </div>
-            </div>
-            <div className="hero-visual-grid">
-              {[
-                { icon:'🫚', label:'Roots & Tubers' },
-                { icon:'🌾', label:'Seeds & Spices' },
-                { icon:'🌸', label:'Flowers'        },
-                { icon:'🌿', label:'Herbs & Leaves' },
-                { icon:'💎', label:'Gums & Resins'  },
-                { icon:'🪨', label:'Minerals'       },
-              ].map((c,i) => (
-                <div key={i} className="hvg-cell">
-                  <span>{c.icon}</span>
-                  <p>{c.label}</p>
-                </div>
-              ))}
-            </div>
+
+          
+
+            {/* MAIN IMAGE */}
+            <img
+              src="/images/HERO.png"
+              alt="Ayurvedic raw materials"
+              className="hero-main-image"
+            />
+
           </div>
         </div>
 
@@ -136,7 +135,7 @@ export default function Home() {
 
       {/* CATEGORIES */}
       <section className="categories-modern">
-        <h2>Categories Of Herbs You Can Find Here </h2>
+        <h2>Find Your Herbs Here</h2>
         <div className="category-grid">
           {categories.map(item => (
             <div key={item.name} className="category-card">

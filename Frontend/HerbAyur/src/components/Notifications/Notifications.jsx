@@ -42,29 +42,61 @@ function highlightMessage(message) {
   );
 }
 
-// Map notification type to destination path
-function getNavPath(notification) {
+// Map notification type to destination path + tab
+function getNavTarget(notification) {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user.role;
+  const msg  = notification.message || "";
+
   switch (notification.type) {
     case "new_supplier":
+      // Could be: new supplier registration, warning removed, company name change, profile change
+      if (role === "admin") {
+        if (msg.includes("company name change") || msg.includes("submitted"))
+          return { path: "/admin", tab: "suppliers" };
+        if (msg.includes("Warning") || msg.includes("warning"))
+          return null; // just informational
+        return { path: "/admin", tab: "suppliers" };
+      }
+      return null;
+
+    case "new_customer":
+      return role === "admin" ? { path: "/admin", tab: "overview" } : null;
+
     case "supplier_approved":
     case "supplier_rejected":
-      return role === "admin" ? "/admin" : "/supplier-dashboard";
-    case "new_customer":
-      return "/admin";
+      return role === "supplier" ? { path: "/supplier-dashboard", tab: "marketplace" } : null;
+
     case "offer_received":
     case "request_update":
-      return "/customer-dashboard";
+      return { path: "/customer-dashboard", tab: "offers" };
+
     case "offer_accepted":
-      return "/supplier-dashboard";
+      return { path: "/supplier-dashboard", tab: "marketplace" };
+
     case "order_confirmed":
+      if (role === "supplier") return { path: "/supplier-dashboard", tab: "orders" };
+      return { path: "/customer-dashboard", tab: "orders" };
+
     case "order_status_update":
-      return role === "supplier" ? "/supplier-dashboard" : "/customer-dashboard";
+      if (role === "supplier") {
+        // COD payment marked by customer — go to payments to confirm
+        if (msg.includes("COD") || msg.includes("cash") || msg.includes("Confirm"))
+          return { path: "/supplier-dashboard", tab: "payments" };
+        // Customer confirmed delivery
+        return { path: "/supplier-dashboard", tab: "orders" };
+      }
+      // Customer: order status update or COD confirmed by supplier
+      if (msg.includes("COD") || msg.includes("confirmed receipt"))
+        return { path: "/customer-dashboard", tab: "payments" };
+      return { path: "/customer-dashboard", tab: "orders" };
+
     case "feedback_received":
-      return "/supplier-dashboard";
+      return { path: "/supplier-dashboard", tab: "feedbacks" };
+
     case "contact_message":
-      return "/admin";
+      return { path: "/admin", tab: "messages" };
+
     default:
       return null;
   }
@@ -115,9 +147,9 @@ function Notifications() {
 
   const handleClick = async (n) => {
     if (!n.read) await markRead(n._id);
-    const path = getNavPath(n);
+    const target = getNavTarget(n);
     setOpen(false);
-    if (path) navigate(path);
+    if (target) navigate(target.path, { state: { tab: target.tab } });
   };
 
   const unread = notifications.filter(n => !n.read).length;
@@ -140,15 +172,19 @@ function Notifications() {
 
           {notifications.length === 0
             ? <div className="notif-empty">No notifications yet</div>
-            : notifications.map(n => (
-              <div
-                key={n._id}
-                className={`notif-item ${n.read ? "read" : "unread"} ${getNavPath(n) ? "notif-clickable" : ""}`}
-                onClick={() => handleClick(n)}>
-                <p>{highlightMessage(n.message)}</p>
-                <span>{new Date(n.createdAt).toLocaleDateString()}</span>
-              </div>
-            ))
+            : <div className="notif-list">{notifications.map(n => {
+                const target = getNavTarget(n);
+                return (
+                  <div
+                    key={n._id}
+                    className={`notif-item ${n.read ? "read" : "unread"} ${target ? "notif-clickable" : ""}`}
+                    onClick={() => handleClick(n)}>
+                    <p>{highlightMessage(n.message)}</p>
+                    <span>{new Date(n.createdAt).toLocaleDateString()}</span>
+                  </div>
+                );
+              })}
+            </div>
           }
         </div>
       )}

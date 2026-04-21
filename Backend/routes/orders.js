@@ -4,6 +4,28 @@ const Offer        = require("../models/Offer");
 const Request      = require("../models/Request");
 const Notification = require("../models/Notification");
 const auth         = require("../middleware/auth");
+const { releaseOfferReservation } = require("../utils/offerStock");
+const { exec } = require("child_process");
+const path = require("path");
+
+const PIPELINE = path.join(__dirname, "..", "ml_module", "pipeline.py");
+let   _mlRunning = false;
+let   _mlTimer   = null;
+
+function triggerPipeline() {
+  if (_mlTimer) clearTimeout(_mlTimer);
+  _mlTimer = setTimeout(() => {
+    if (_mlRunning) return;
+    _mlRunning = true;
+    console.log("[ML] New order detected — retraining prediction model...");
+    exec(`python "${PIPELINE}"`, { timeout: 180000 }, (err) => {
+      _mlRunning = false;
+      _mlTimer   = null;
+      if (err) console.error("[ML] Pipeline failed:", err.message);
+      else     console.log("[ML] Predictions updated.");
+    });
+  }, 10000); // debounce 10s
+}
 
 // POST — customer creates order after payment
 router.post("/", auth, async (req, res) => {
@@ -63,7 +85,9 @@ router.post("/", auth, async (req, res) => {
                            overlapping.length > 0;
 
       if (shouldReject) {
-        await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+        sibling.status = "Rejected";
+        await sibling.save();
+        await releaseOfferReservation(sibling);
         const reason = offer.supplyType === "Whole"
           ? `the customer accepted a whole-list offer from another supplier`
           : `the customer accepted another supplier for: ${overlapping.map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(", ")}`;
@@ -100,6 +124,10 @@ router.post("/", auth, async (req, res) => {
     });
 
     res.status(201).json(order);
+
+    // Trigger ML pipeline in background — non-blocking, debounced 10s
+    triggerPipeline();
+
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

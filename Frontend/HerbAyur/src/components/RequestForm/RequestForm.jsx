@@ -3,7 +3,17 @@ import { useNavigate, useLocation } from "react-router-dom";
 import API_BASE from "../../api";
 import "./RequestForm.css";
 import { User, Phone, MapPin, Calendar, Plus, Trash2, Send, Edit, Check, X, AlertCircle, CheckCircle2, Loader2, FileText } from "lucide-react";
-import { CATEGORIES, CONDITIONS, PARTS, getUnits, isValidUnit, DEFAULT_MATERIAL } from "../../materialOptions";
+import {
+  CATEGORIES,
+  CONDITIONS,
+  PARTS,
+  getUnits,
+  isValidUnit,
+  DEFAULT_MATERIAL,
+  normalizeCategory,
+  normalizeCondition,
+  normalizePart,
+} from "../../materialOptions";
 
 function RequestForm() {
   const navigate = useNavigate();
@@ -16,7 +26,14 @@ function RequestForm() {
   const [listName, setListName]         = useState(prefill?.listName || "");
   const [materials, setMaterials]       = useState(
     prefill?.materials?.length
-      ? prefill.materials.map((m, i) => ({ ...DEFAULT_MATERIAL, ...m, id: i + 1 }))
+      ? prefill.materials.map((m, i) => ({
+          ...DEFAULT_MATERIAL,
+          ...m,
+          category: normalizeCategory(m.category),
+          condition: normalizeCondition(m.condition),
+          part: normalizePart(m.part),
+          id: i + 1,
+        }))
       : [{ ...DEFAULT_MATERIAL, id: 1 }]
   );
   const [formStatus, setFormStatus]     = useState("idle");
@@ -53,13 +70,23 @@ function RequestForm() {
     setMaterials(materials.map(m => {
       if (m.id !== id) return m;
       const updated = { ...m, [field]: value };
-      // Auto-reset unit when condition or part changes and current unit becomes invalid
-      if (field === "condition" || field === "part") {
-        const units = getUnits(updated.condition, updated.part);
+      // Auto-reset unit when category changes and current unit becomes invalid
+      if (field === "category") {
+        const units = getUnits(updated.category);
         if (!units.includes(updated.unit)) updated.unit = units[0];
       }
       return updated;
     }));
+  };
+
+  const handleQuantityChange = (id, value) => {
+    if (value === "") {
+      updateMaterial(id, "quantity", value);
+      return;
+    }
+    if (!/^\d*\.?\d*$/.test(value)) return;
+    if (Number(value) < 0) return;
+    updateMaterial(id, "quantity", value);
   };
 
   const validate = () => {
@@ -69,7 +96,7 @@ function RequestForm() {
     for (const m of materials) {
       if (!m.name.trim())                    { setValidationMsg("All materials must have a name."); return false; }
       if (!m.quantity || Number(m.quantity) <= 0) { setValidationMsg("All materials must have a valid quantity (> 0)."); return false; }
-      if (!isValidUnit(m.condition, m.part, m.unit)) { setValidationMsg(`Invalid unit "${m.unit}" for "${m.name}". Please select a valid unit.`); return false; }
+      if (!isValidUnit(m.category, m.unit)) { setValidationMsg(`Invalid unit "${m.unit}" for "${m.name}". Please select a valid unit.`); return false; }
     }
     setValidationMsg(""); return true;
   };
@@ -162,13 +189,13 @@ function RequestForm() {
                     </thead>
                     <tbody>
                       {materials.map((m, idx) => {
-                        const units   = getUnits(m.condition, m.part);
+                        const units   = getUnits(m.category);
                         const invalid = m.unit && !units.includes(m.unit);
                         return (
                           <tr key={m.id} className="req-row">
                             <td className="req-no">{idx + 1}</td>
                             <td>
-                              <input placeholder="e.g. Turmeric, Neem, Ginger"
+                              <input placeholder="Enter Raw Material"
                                 value={m.name} onChange={e => updateMaterial(m.id, "name", e.target.value)} required/>
                             </td>
                             <td>
@@ -188,7 +215,16 @@ function RequestForm() {
                             </td>
                             <td>
                               <input type="number" min="0.01" step="0.01" placeholder="Qty"
-                                value={m.quantity} onChange={e => updateMaterial(m.id, "quantity", e.target.value)} required/>
+                                value={m.quantity}
+                                onChange={e => handleQuantityChange(m.id, e.target.value)}
+                                onKeyDown={e => {
+                                  if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+                                }}
+                                onPaste={e => {
+                                  const pasted = e.clipboardData.getData("text");
+                                  if (!/^\d*\.?\d*$/.test(pasted) || Number(pasted) < 0) e.preventDefault();
+                                }}
+                                required/>
                             </td>
                             <td>
                               <select value={m.unit}
@@ -196,7 +232,7 @@ function RequestForm() {
                                 className={invalid ? "unit-invalid" : ""}>
                                 {units.map(u => <option key={u}>{u}</option>)}
                               </select>
-                              {invalid && <span className="unit-warn">⚠ Invalid for this condition</span>}
+                              {invalid && <span className="unit-warn">⚠ Invalid for this category</span>}
                             </td>
                             <td>
                               <button type="button" className="btn-remove" onClick={() => removeMaterial(m.id)}
@@ -220,7 +256,7 @@ function RequestForm() {
                     <X size={16}/> Cancel
                   </button>
                   <button type="submit" className="btn btn-primary submit-btn"
-                    disabled={formStatus === "submitting" || materials.some(m => !isValidUnit(m.condition, m.part, m.unit))}>
+                    disabled={formStatus === "submitting" || materials.some(m => !isValidUnit(m.category, m.unit))}>
                     {formStatus === "submitting" ? "Submitting..." : <><Send size={16}/> Submit Requirement</>}
                   </button>
                 </div>
