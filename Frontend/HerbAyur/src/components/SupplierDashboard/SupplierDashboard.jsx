@@ -5,6 +5,7 @@ import Inventory from "../Inventory/Inventory";
 import SupplierOrders from "../Orders/SupplierOrders";
 import SupplierFeedbacks from "../Orders/SupplierFeedbacks";
 import { SupplierReport } from "../Reports/Reports";
+import DemandPredictions from "../Predictions/DemandPredictions";
 import { SupplierPayment } from "../PaymentDashboard/PaymentDashboard";
 import API_BASE from "../../api";
 import "./SupplierDashboard.css";
@@ -16,6 +17,7 @@ const TABS = [
   { id: "payments",    label: "💳 Payments" },
   { id: "feedbacks",   label: "⭐ Feedbacks" },
   { id: "reports",     label: "📊 Reports" },
+  { id: "predictions", label: "📈 Demand Forecast" },
 ];
 
 function SupplierDashboard() {
@@ -26,7 +28,8 @@ function SupplierDashboard() {
     if (location.state?.tab) setTab(location.state.tab);
   }, [location.state?.tab]);
   const [profile, setProfile] = useState(null);
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user       = JSON.parse(localStorage.getItem("user") || "{}");
+  const supplierId = user.id || null;
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -76,6 +79,7 @@ function SupplierDashboard() {
       {tab === "payments"    && <SupplierPayment />}
       {tab === "feedbacks"   && <SupplierFeedbacks />}
       {tab === "reports"     && <SupplierReport />}
+      {tab === "predictions" && <DemandPredictions supplierId={supplierId} />}
     </div>
   );
 }
