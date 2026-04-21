@@ -2,7 +2,7 @@ export const LOGO = "/images/HerbAyurLogo_transparent.png";
 
 export const PRINT_CSS = `
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',sans-serif;padding:36px;color:#1a3c34;background:white}
+  body{font-family:'Segoe UI',sans-serif;padding:36px;color:#1a3c34;background:white;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
   .rpt-header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #2e7d32;padding-bottom:14px;margin-bottom:20px}
   .rpt-logo{width:64px;height:64px;object-fit:contain}
   .rpt-brand h1{font-size:20px;font-weight:600;line-height:1.2}
@@ -18,15 +18,15 @@ export const PRINT_CSS = `
   .rpt-stat-num{font-size:20px;font-weight:900;color:#2e7d32}
   .rpt-stat-label{font-size:10px;color:#6b7280;margin-top:2px}
   table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
-  th{background:#2e7d32;color:white;padding:7px 9px;text-align:left;font-size:11px}
-  td{padding:6px 9px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+  th{background:#2e7d32;color:white;padding:7px 9px;text-align:left;font-size:11px;font-weight:900}
+  td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top}
   tr:nth-child(even) td{background:#f9fafb}
-  .badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700}
-  .bg{background:#dcfce7;color:#166534}
-  .bb{background:#dbeafe;color:#1d4ed8}
-  .ba{background:#fef3c7;color:#92400e}
-  .br{background:#fee2e2;color:#991b1b}
-  .bp{background:#f3e8ff;color:#7c3aed}
+  .badge{display:inline-block;padding:5px 12px;border-radius:10px;font-size:11px;font-weight:900;border:2px solid;text-shadow:0 1px 2px rgba(0,0,0,0.1);-webkit-font-smoothing:antialiased}
+  .bg{background:#b7e4c7;color:#003d16;border-color:#0b5d22}
+  .bb{background:#a3d8fd;color:#003d99;border-color:#0050cc}
+  .ba{background:#fdd66b;color:#664d03;border-color:#b8860b}
+  .br{background:#f8b4b4;color:#660000;border-color:#cc0000}
+  .bp{background:#dda7e0;color:#440066;border-color:#9900cc}
   .rpt-footer{text-align:center;margin-top:24px;color:#9ca3af;font-size:10px;border-top:1px solid #e5e7eb;padding-top:10px}
 `;
 
@@ -81,10 +81,31 @@ export function RptStats({ stats }) {
 
 export function badge(status) {
   const map = {
-    Delivered:"bg", Approved:"bg", approved:"bg", "In Stock":"bg",
-    Processing:"ba", pending:"ba", "Pending":"ba", "Low Stock":"ba",
-    Confirmed:"bb", active:"bb",
-    Rejected:"br", rejected:"br", "Out of Stock":"br", Cancelled:"br",
+    // Green (bg) - Success/Completed/In Stock/Approved
+    Delivered: "bg", delivered: "bg",
+    Approved: "bg", approved: "bg",
+    "In Stock": "bg", "in stock": "bg",
+    Completed: "bg", completed: "bg",
+    Whole: "bg", whole: "bg",
+    Customer: "bg", customer: "bg",
+    
+    // Amber (ba) - Processing/Pending/Low Stock/Partial
+    Processing: "ba", processing: "ba",
+    pending: "ba", Pending: "ba",
+    "Low Stock": "ba", "low stock": "ba",
+    Partial: "ba", partial: "ba",
+    Guest: "ba", guest: "ba",
+    
+    // Blue (bb) - Confirmed/Active/Item/Supplier
+    Confirmed: "bb", confirmed: "bb",
+    active: "bb", Active: "bb",
+    Item: "bb", item: "bb",
+    Supplier: "bb", supplier: "bb",
+    
+    // Red (br) - Rejected/Cancelled/Out of Stock
+    Rejected: "br", rejected: "br",
+    "Out of Stock": "br", "out of stock": "br",
+    Cancelled: "br", cancelled: "br",
   };
   return map[status] || "bb";
 }
