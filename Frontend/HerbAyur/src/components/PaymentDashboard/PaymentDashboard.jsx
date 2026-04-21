@@ -22,7 +22,9 @@ function ReceiptPrint({ order, onClose }) {
       .badge{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
       .footer{text-align:center;margin-top:28px;color:#9ca3af;font-size:11px;line-height:1.6}
     </style></head><body>${ref.current.innerHTML}</body></html>`);
-    win.document.close(); win.focus(); win.print(); win.close();
+    win.document.close();
+    win.focus();
+    win.onload = () => { win.print(); win.close(); };
   };
   return (
     <div className="pd-receipt-overlay">
@@ -78,13 +80,23 @@ export function CustomerPayment() {
   const [filterDate, setFilterDate]     = useState("");
   const token = localStorage.getItem("token");
 
-  useEffect(() => {
+  const fetchOrders = () => {
     fetch(`${API_BASE}/orders/my-orders`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setOrders(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchOrders(); }, []);
+
+  const markCodPaid = async (orderId) => {
+    await fetch(`${API_BASE}/orders/${orderId}/pay-cod`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchOrders();
+  };
 
   const totalSpent   = orders.reduce((s, o) => s + o.totalAmount, 0);
   const cardPayments = orders.filter(o => o.paymentMethod === "Card");
@@ -192,9 +204,16 @@ export function CustomerPayment() {
                     </span>
                   </td>
                   <td>
-                    <span className={`pd-status-badge ${o.paymentStatus === "Paid" ? "pd-paid" : "pd-pending"}`}>
-                      {o.paymentStatus}
-                    </span>
+                    <div style={{display:"flex",flexDirection:"column",gap:"0.3rem",alignItems:"flex-start"}}>
+                      <span className={`pd-status-badge ${o.paymentStatus === "Paid" ? "pd-paid" : o.paymentStatus === "COD Confirmed" ? "pd-cod-confirmed" : "pd-pending"}`}>
+                        {o.paymentStatus}
+                      </span>
+                      {o.paymentMethod === "Cash on Delivery" && o.paymentStatus === "Pending" && o.orderStatus === "Delivered" && (
+                        <button className="pd-cod-action-btn" onClick={() => markCodPaid(o._id)}>
+                          💵 Mark as Paid
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <button className="pd-receipt-btn" onClick={() => setReceipt(o)}>
@@ -222,13 +241,23 @@ export function SupplierPayment() {
   const [filterDate, setFilterDate]     = useState("");
   const token = localStorage.getItem("token");
 
-  useEffect(() => {
+  const fetchOrders = () => {
     fetch(`${API_BASE}/orders/supplier-orders`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setOrders(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchOrders(); }, []);
+
+  const confirmCodPayment = async (orderId) => {
+    await fetch(`${API_BASE}/orders/${orderId}/confirm-cod-payment`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchOrders();
+  };
 
   const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
   const cardPayments = orders.filter(o => o.paymentMethod === "Card");
@@ -341,7 +370,7 @@ export function SupplierPayment() {
               <tr>
                 <th>#</th><th>Receipt No</th><th>Date</th><th>Customer</th>
                 <th>List</th><th>Items</th><th>Amount</th><th>Method</th>
-                <th>Order Status</th><th>Receipt</th>
+                <th>Payment Status</th><th>Order Status</th><th>Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -361,6 +390,18 @@ export function SupplierPayment() {
                     <span className={`pd-method-badge ${o.paymentMethod === "Card" ? "pd-card" : "pd-cod"}`}>
                       {o.paymentMethod === "Cash on Delivery" ? "COD" : o.paymentMethod}
                     </span>
+                  </td>
+                  <td>
+                    <div style={{display:"flex",flexDirection:"column",gap:"0.3rem",alignItems:"flex-start"}}>
+                      <span className={`pd-status-badge ${o.paymentStatus === "COD Confirmed" ? "pd-cod-confirmed" : o.paymentStatus === "Paid" ? "pd-paid" : "pd-pending"}`}>
+                        {o.paymentStatus}
+                      </span>
+                      {o.paymentMethod === "Cash on Delivery" && o.paymentStatus === "Paid" && (
+                        <button className="pd-cod-action-btn pd-cod-confirm-btn" onClick={() => confirmCodPayment(o._id)}>
+                          ✅ Confirm Payment
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span className={`pd-status-badge ${

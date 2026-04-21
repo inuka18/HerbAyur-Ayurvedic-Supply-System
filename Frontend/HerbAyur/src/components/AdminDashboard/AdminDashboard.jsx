@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import API_BASE from "../../api";
 import "./AdminDashboard.css";
 import { AdminReport } from "../Reports/Reports";
@@ -34,7 +35,12 @@ function StatCard({ icon, label, value, color }) {
 }
 
 export default function AdminDashboard() {
-  const [tab, setTab]               = useState("overview");
+  const location = useLocation();
+  const [tab, setTab]               = useState(location.state?.tab || "overview");
+
+  useEffect(() => {
+    if (location.state?.tab) setTab(location.state.tab);
+  }, [location.state?.tab]);
   const [suppliers, setSuppliers]   = useState([]);
   const [ratings, setRatings]       = useState({});
   const [messages, setMessages]     = useState([]);
@@ -137,6 +143,14 @@ export default function AdminDashboard() {
   const approveRejectChanges = async (supplierId, action) => {
     await fetch(`${API_BASE}/auth/profile-changes/${supplierId}/${action}`, {
       method: "POST",
+      headers: { Authorization: `Bearer ${token()}` },
+    });
+    fetchSuppliers();
+  };
+
+  const removeWarning = async (supplierId, warningIndex) => {
+    await fetch(`${API_BASE}/auth/warn/${supplierId}/${warningIndex}`, {
+      method: "DELETE",
       headers: { Authorization: `Bearer ${token()}` },
     });
     fetchSuppliers();
@@ -317,14 +331,35 @@ export default function AdminDashboard() {
                       })
                       .map((s,i)=>(
                       <tr key={s._id}>
-                        <td>{i+1}</td><td>{s.firstName} {s.lastName}{s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}{s.warnings?.length > 0 && <span className="warn-count-tag">⚠️ {s.warnings.length} warning{s.warnings.length > 1 ? "s" : ""}</span>}</td><td>{s.companyName||"—"}</td>
+                        <td>{i+1}</td>
+                        <td>
+                          <div className="supplier-name-cell">
+                            <span className="supplier-name">{s.firstName} {s.lastName}</span>
+                            <div className="supplier-tags">
+                              {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
+                            {s.warnings?.length > 0 && (
+                                s.warnings.map((w, wi) => (
+                                  <span key={wi} className="warn-count-tag">
+                                    <span className="warn-tag-icon">⚠️</span>
+                                    Warning {wi + 1}
+                                    <button
+                                      className="warn-tag-remove"
+                                      title={w.message}
+                                      onClick={() => removeWarning(s._id, wi)}
+                                    >×</button>
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{s.companyName||"—"}</td>
                         <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
                         <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
                         <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
                         <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
                         <td className="action-btns">
                           {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
-                          {s.status!=="pending"&&<span style={{color:"#9ca3af",fontSize:"0.8rem"}}>—</span>}
                           <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
                           <button className="btn-remove" onClick={() => removeUser(s._id, `${s.firstName} ${s.lastName}`)}>🗑 Remove</button>
                         </td>
@@ -406,7 +441,7 @@ export default function AdminDashboard() {
                 <input className="adm-filter-select" type="date" value={ordDate} onChange={e => setOrdDate(e.target.value)} title="Filter by date"/>
               </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
                 <tbody>
                   {adminOrders
                     .filter(o => {
@@ -432,6 +467,11 @@ export default function AdminDashboard() {
                       <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
                       <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
                       <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
+                      <td><span className={`status-badge ${
+                        o.paymentStatus === "COD Confirmed" ? "status-approved" :
+                        o.paymentStatus === "Paid"          ? "status-approved" :
+                        "status-pending"
+                      }`}>{o.paymentStatus}</span></td>
                       <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
                       <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
                     </tr>

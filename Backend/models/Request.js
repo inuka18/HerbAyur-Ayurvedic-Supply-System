@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const materialSchema = new mongoose.Schema({
   name:      { type: String, required: true },
-  category:  { type: String, default: "Roots" },
+  category:  { type: String, default: "Raw Herb" },
   unit:      { type: String, default: "kg" },
   quantity:  { type: Number, required: true },
-  condition: { type: String, default: "Fresh – Raw" },
+  condition: { type: String, default: "Fresh" },
   part:      { type: String, default: "Root" },
 });
 

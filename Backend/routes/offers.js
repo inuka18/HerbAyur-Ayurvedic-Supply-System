@@ -3,35 +3,70 @@ const Offer        = require("../models/Offer");
 const Request      = require("../models/Request");
 const Notification = require("../models/Notification");
 const User         = require("../models/User");
-const Inventory    = require("../models/Inventory");
 const auth         = require("../middleware/auth");
+const { reserveInventoryForItems, restoreInventoryForItems, releaseOfferReservation } = require("../utils/offerStock");
 
 // POST — supplier submits an offer
 router.post("/", auth, async (req, res) => {
   if (req.user.role !== "supplier")
     return res.status(403).json({ message: "Only suppliers can submit offers." });
+  let reservedItems = null;
+  let offerCreated = false;
   try {
     const { requestId, supplyType, items } = req.body;
+    const selectedItems = Array.isArray(items) ? items : [];
+    if (selectedItems.length === 0) {
+      return res.status(400).json({ message: "Select at least one item to supply." });
+    }
+
+    for (const item of selectedItems) {
+      if (!item.inventoryId) {
+        return res.status(400).json({ message: `Please select inventory for "${item.name}".` });
+      }
+      if (!Number.isFinite(Number(item.supplyQty)) || Number(item.supplyQty) <= 0) {
+        return res.status(400).json({ message: `Invalid supply quantity for "${item.name}".` });
+      }
+      if (!Number.isFinite(Number(item.price)) || Number(item.price) <= 0) {
+        return res.status(400).json({ message: `Price must be a positive number for "${item.name}".` });
+      }
+    }
 
     const request = await Request.findById(requestId);
     if (!request) return res.status(404).json({ message: "Request not found" });
 
-    const offer = await Offer.create({ requestId, supplierId: req.user.id, supplyType, items });
+    reservedItems = await reserveInventoryForItems(req.user.id, selectedItems);
+    const offer = await Offer.create({
+      requestId,
+      supplierId: req.user.id,
+      supplyType,
+      items: reservedItems,
+      stockReserved: true,
+      stockReleased: false,
+    });
+    offerCreated = true;
 
     // Notify the customer
     if (request.customerId) {
-      const supplier = await User.findById(req.user.id);
-      await Notification.create({
-        recipient:     request.customerId,
-        recipientRole: "customer",
-        message:       `A supplier "${supplier.firstName} ${supplier.lastName}" has submitted an offer for your request.`,
-        type:          "offer_received",
-        relatedId:     offer._id,
-      });
+      try {
+        const supplier = await User.findById(req.user.id);
+        await Notification.create({
+          recipient:     request.customerId,
+          recipientRole: "customer",
+          message:       `A supplier "${supplier.firstName} ${supplier.lastName}" has submitted an offer for your request.`,
+          type:          "offer_received",
+          relatedId:     offer._id,
+        });
+      } catch (notifyErr) {
+        console.error("Offer notification failed:", notifyErr.message);
+      }
     }
 
     res.status(201).json(offer);
   } catch (err) {
+    if (reservedItems && !offerCreated) {
+      try { await restoreInventoryForItems(req.user.id, reservedItems); }
+      catch (rollbackErr) { console.error("Offer stock rollback failed:", rollbackErr.message); }
+    }
     res.status(400).json({ message: err.message });
   }
 });
@@ -73,11 +108,12 @@ router.patch("/:id/accept", auth, async (req, res) => {
     if (offer.supplyType === "Whole") {
       // Reject all other offers for same request and notify each supplier
       const others = await Offer.find({ requestId: offer.requestId._id, _id: { $ne: offer._id }, status: { $ne: "Rejected" } });
-      await Offer.updateMany(
-        { requestId: offer.requestId._id, _id: { $ne: offer._id } },
-        { status: "Rejected" }
-      );
       for (const other of others) {
+        if (other.status !== "Rejected") {
+          other.status = "Rejected";
+          await other.save();
+        }
+        await releaseOfferReservation(other);
         await Notification.create({
           recipient:     other.supplierId,
           recipientRole: "supplier",
@@ -93,7 +129,9 @@ router.patch("/:id/accept", auth, async (req, res) => {
       for (const sibling of siblings) {
         const overlap = sibling.items.some(i => acceptedItemNames.includes(i.name));
         if (overlap) {
-          await Offer.findByIdAndUpdate(sibling._id, { status: "Rejected" });
+          sibling.status = "Rejected";
+          await sibling.save();
+          await releaseOfferReservation(sibling);
           await Notification.create({
             recipient:     sibling.supplierId,
             recipientRole: "supplier",
@@ -107,21 +145,6 @@ router.patch("/:id/accept", auth, async (req, res) => {
 
     offer.status = "Accepted";
     await offer.save();
-
-    // Auto-decrease supplier inventory for each offered item
-    const normalize = (s) => s.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "");
-    const inventory = await Inventory.find({ supplierId: offer.supplierId });
-    for (const offeredItem of offer.items) {
-      // find best matching inventory item by name or alias
-      let matched = inventory.find(inv =>
-        normalize(inv.name) === normalize(offeredItem.name) ||
-        inv.aliases.some(a => normalize(a) === normalize(offeredItem.name))
-      );
-      if (matched) {
-        matched.quantity = Math.max(0, matched.quantity - offeredItem.supplyQty);
-        await matched.save();
-      }
-    }
 
     // Notify the supplier
     const supplier = await User.findById(offer.supplierId);

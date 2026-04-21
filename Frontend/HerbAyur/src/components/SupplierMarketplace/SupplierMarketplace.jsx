@@ -6,15 +6,17 @@ import API_BASE from "../../api";
 
 function SupplierMarketplace() {
   const navigate = useNavigate();
+  const getRequestId = (value) => String(value?._id || value || "");
 
   const [requests, setRequests]           = useState([]);
   const [myOfferRequestIds, setMyOfferRequestIds] = useState(new Set());
   const [myOffers, setMyOffers]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [selectedDate, setSelectedDate]   = useState("");
-  const [sortType, setSortType]           = useState("latest");
+  const [sortType, setSortType]           = useState("latest"); // "latest" | "urgent"
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [view, setView]                   = useState("new"); // "new" | "confirmed"
+  const [confirmedFilter, setConfirmedFilter] = useState("All"); // "All" | "Pending" | "Accepted" | "Rejected"
 
   const token = localStorage.getItem("token");
 
@@ -23,12 +25,10 @@ function SupplierMarketplace() {
       fetch(`${API_BASE}/requests`).then(r => r.json()),
       fetch(`${API_BASE}/offers/my-offers`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
     ]).then(([reqs, myOffersData]) => {
-      // Hide fully completed requests from marketplace
-      const activeReqs = (Array.isArray(reqs) ? reqs : []).filter(r => !r.fullyCompleted);
-      setRequests(activeReqs);
+      setRequests(Array.isArray(reqs) ? reqs : []);
       const offList = Array.isArray(myOffersData) ? myOffersData : [];
       setMyOffers(offList);
-      const ids = new Set(offList.map(o => o.requestId?._id || o.requestId));
+      const ids = new Set(offList.map(o => getRequestId(o.requestId)).filter(Boolean));
       setMyOfferRequestIds(ids);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -36,26 +36,44 @@ function SupplierMarketplace() {
     let filtered = selectedDate
       ? list.filter(r => new Date(r.requiredDate).toISOString().slice(0, 10) === selectedDate)
       : list;
-    return [...filtered].sort((a, b) => {
-      if (sortType === "latest") return new Date(b.requiredDate) - new Date(a.requiredDate);
-      if (sortType === "quantity") {
-        return b.materials.reduce((s, m) => s + m.quantity, 0) - a.materials.reduce((s, m) => s + m.quantity, 0);
-      }
-      return 0;
-    });
+    if (sortType === "urgent") {
+      filtered = filtered.filter(r => (new Date(r.requiredDate) - new Date()) <= 24 * 60 * 60 * 1000);
+      return [...filtered].sort((a, b) => new Date(a.requiredDate) - new Date(b.requiredDate));
+    }
+    return [...filtered].sort((a, b) => new Date(b.createdAt || b.requiredDate) - new Date(a.createdAt || a.requiredDate));
   };
 
-  const newRequests       = applyFiltersSort(requests.filter(r => !myOfferRequestIds.has(r._id)));
-  const confirmedRequests = applyFiltersSort(requests.filter(r => myOfferRequestIds.has(r._id)));
+  const getOffersForRequest = (requestId) =>
+    myOffers.filter(o => getRequestId(o.requestId) === getRequestId(requestId));
 
-  const isUrgent = (date) => (new Date(date) - new Date()) / (1000 * 60 * 60 * 24) <= 2;
+  const pickLatestOffer = (offers) =>
+    [...offers].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+
+  const getOfferForDisplay = (requestId, statusFilter = "All") => {
+    const offers = getOffersForRequest(requestId);
+    if (offers.length === 0) return null;
+    if (statusFilter === "All") return pickLatestOffer(offers);
+    const matched = offers.filter(o => o.status === statusFilter);
+    if (matched.length === 0) return null;
+    return pickLatestOffer(matched);
+  };
+
+  const activeRequests = requests.filter(r => !r.fullyCompleted);
+  const newRequests = applyFiltersSort(activeRequests.filter(r => !myOfferRequestIds.has(getRequestId(r._id))));
+
+  const confirmedRequests = applyFiltersSort(
+    requests.filter(r => {
+      const offers = getOffersForRequest(r._id);
+      if (offers.length === 0) return false;
+      if (confirmedFilter === "All") return true;
+      return offers.some(o => o.status === confirmedFilter);
+    })
+  );
+
+  const isUrgent = (date) => (new Date(date) - new Date()) <= 24 * 60 * 60 * 1000;
 
   const renderConfirmedCard = (req) => {
-    // Find this supplier's offer for this request
-    const myOffer = myOffers.find(o =>
-      (o.requestId?._id || o.requestId) === req._id ||
-      (o.requestId?._id || o.requestId)?.toString() === req._id?.toString()
-    );
+    const myOffer = getOfferForDisplay(req._id, confirmedFilter);
     const offeredItemNames = myOffer
       ? new Set(myOffer.items.map(i => i.name.toLowerCase().trim()))
       : new Set();
@@ -112,7 +130,7 @@ function SupplierMarketplace() {
         <h3>{req.listName || req.customer.name}</h3>
         <div className="sm-top-right">
           {isUrgent(req.requiredDate) && <AlertTriangle size={16} color="#f67105"/>}
-          {myOfferRequestIds.has(req._id) && <span className="sm-confirmed-tag"><CheckCircle size={12}/> Offered</span>}
+          {myOfferRequestIds.has(getRequestId(req._id)) && <span className="sm-confirmed-tag"><CheckCircle size={12}/> Offered</span>}
           {isPartial && <span className="sm-partial-tag">⚡ Partial</span>}
           <span className="sm-badge"><Package size={14}/> {uncoveredItems.length}/{req.materials.length} items</span>
         </div>
@@ -129,7 +147,7 @@ function SupplierMarketplace() {
       </div>
       <div className="sm-card-actions">
         <button className="sm-view-btn" onClick={() => setSelectedRequest(req)}><Eye size={16}/> View</button>
-        {!myOfferRequestIds.has(req._id) && (
+        {!myOfferRequestIds.has(getRequestId(req._id)) && (
           <button className="sm-supply-btn" onClick={() => navigate("/SupplierConfirmation", { state: req })}>Supply Now</button>
         )}
       </div>
@@ -140,7 +158,7 @@ function SupplierMarketplace() {
   if (loading) return <div className="sm-page"><p style={{padding:"2rem"}}>Loading requests...</p></div>;
 
   // Stats
-  const totalRequests  = requests.length;
+  const totalRequests  = activeRequests.length;
   const totalOffers    = myOffers.length;
   const pendingOffers  = myOffers.filter(o => o.status === "Pending").length;
   const acceptedOffers = myOffers.filter(o => o.status === "Accepted").length;
@@ -154,12 +172,6 @@ function SupplierMarketplace() {
           <div className="sm-filter-box">
             <Filter size={16}/>
             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}/>
-          </div>
-          <div className="sm-sort-box">
-            <select value={sortType} onChange={e => setSortType(e.target.value)}>
-              <option value="latest">Latest</option>
-              <option value="quantity">Highest Quantity</option>
-            </select>
           </div>
         </div>
       </div>
@@ -192,15 +204,49 @@ function SupplierMarketplace() {
         </div>
       </div>
 
-      {/* VIEW TOGGLE */}
+      {/* MAIN VIEW TABS */}
       <div className="sm-view-tabs">
         <button className={view === "new" ? "sm-view-tab active" : "sm-view-tab"} onClick={() => setView("new")}>
           🆕 New Requests <span className="sm-tab-count">{newRequests.length}</span>
         </button>
         <button className={view === "confirmed" ? "sm-view-tab active" : "sm-view-tab"} onClick={() => setView("confirmed")}>
-          ✅ My Confirmed Supplies <span className="sm-tab-count">{confirmedRequests.length}</span>
+          ✅ My Confirmed Supplies <span className="sm-tab-count">{requests.filter(r => getOffersForRequest(r._id).length > 0).length}</span>
         </button>
       </div>
+
+      {/* SUB-FILTER PILLS — row below the tabs */}
+      {view === "new" && (
+        <div className="sm-sub-filters">
+          <span className="sm-sub-label">Sort:</span>
+          {[{ key: "latest", label: "🕒 Latest" }, { key: "urgent", label: "⚡ Urgent" }].map(s => (
+            <button key={s.key} className={sortType === s.key ? "sm-sub-pill active" : "sm-sub-pill"} onClick={() => setSortType(s.key)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === "confirmed" && (
+        <div className="sm-sub-filters">
+          <span className="sm-sub-label">Status:</span>
+          {["All", "Pending", "Accepted", "Rejected"].map(f => {
+            const count = f === "All"
+              ? requests.filter(r => getOffersForRequest(r._id).length > 0).length
+              : requests.filter(r => {
+                  const offers = getOffersForRequest(r._id);
+                  if (offers.length === 0) return false;
+                  return offers.some(o => o.status === f);
+                }).length;
+            const colors = { All: "sm-sub-pill", Pending: "sm-sub-pill amber", Accepted: "sm-sub-pill green", Rejected: "sm-sub-pill red" };
+            return (
+              <button key={f} className={confirmedFilter === f ? `${colors[f]} active` : colors[f]} onClick={() => setConfirmedFilter(f)}>
+                {f === "All" ? "All" : f === "Pending" ? "⏳ Pending" : f === "Accepted" ? "✅ Accepted" : "✕ Rejected"}
+                <span className="sm-sub-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="sm-content">
         {view === "new" ? (
@@ -236,7 +282,7 @@ function SupplierMarketplace() {
               ))}
             </div>
             <div className="sm-popup-footer">
-              {!myOfferRequestIds.has(selectedRequest._id) && (
+              {!myOfferRequestIds.has(getRequestId(selectedRequest._id)) && (
                 <button className="sm-supply-btn" onClick={() => navigate("/SupplierConfirmation", { state: selectedRequest })}>
                   Proceed to Supply
                 </button>

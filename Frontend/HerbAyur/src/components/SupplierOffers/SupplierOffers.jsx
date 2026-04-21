@@ -496,6 +496,8 @@ export default function SupplierOffers() {
         <div className="sm-stat">
           <span className="sm-stat-num">{allOrders.length}</span>
           <span className="sm-stat-label">Orders Placed</span>
+      
+      
         </div>
       </div>
 
@@ -514,7 +516,6 @@ export default function SupplierOffers() {
             <option value="All">All Requests</option>
             <option value="No Orders">No Orders Yet</option>
             <option value="Partial">Partially Ordered</option>
-            <option value="Completed">Fully Completed</option>
           </select>
         </div>
       </div>
