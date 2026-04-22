@@ -45,6 +45,7 @@ export default function SupplierOffers() {
   const [soSearch, setSoSearch]               = useState("");
   const [soDate, setSoDate]                   = useState("");
   const [soStatus, setSoStatus]               = useState("All");
+  const [alertModal, setAlertModal]           = useState(null);
 
   const token = localStorage.getItem("token");
 
@@ -88,17 +89,21 @@ export default function SupplierOffers() {
   const [cancellingId, setCancellingId] = useState(null);
 
   const cancelRequest = async (reqId) => {
-    if (!window.confirm("Cancel this request? This cannot be undone.")) return;
+    setAlertModal({ type: "confirm", title: "Cancel Request?", message: "This action cannot be undone. All supplier offers for this request will be cancelled.", onConfirm: () => proceedCancel(reqId), onCancel: () => setAlertModal(null) });
+  };
+
+  const proceedCancel = async (reqId) => {
     setCancellingId(reqId);
+    setAlertModal(null);
     try {
       const res  = await fetch(`${API_BASE}/requests/${reqId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.message); return; }
-      fetchData();
-    } catch { alert("Something went wrong."); }
+      if (!res.ok) { setAlertModal({ type: "error", title: "Error", message: data.message, onClose: () => setAlertModal(null) }); return; }
+      setAlertModal({ type: "success", title: "Success", message: "Request cancelled successfully!", onClose: () => { setAlertModal(null); fetchData(); } });
+    } catch { setAlertModal({ type: "error", title: "Error", message: "Something went wrong. Please try again.", onClose: () => setAlertModal(null) }); }
     finally { setCancellingId(null); }
   };
 
@@ -574,6 +579,59 @@ export default function SupplierOffers() {
               }
             </div>
             <button className="close-btn" onClick={() => { setProfile(null); setProfileFeedback(null); }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ALERT MODAL - styled popup for cancel confirmation and messages */}
+      {alertModal && (
+        <div className="modal">
+          <div className="alert-modal-card">
+            {alertModal.type === "confirm" && (
+              <>
+                <div className="alert-header alert-header-warning">
+                  <AlertCircle size={24} />
+                  <h3>{alertModal.title}</h3>
+                </div>
+                <p className="alert-message">{alertModal.message}</p>
+                <div className="alert-actions">
+                  <button className="alert-btn alert-btn-cancel" onClick={alertModal.onCancel}>
+                    Cancel
+                  </button>
+                  <button className="alert-btn alert-btn-confirm" onClick={alertModal.onConfirm}>
+                    Confirm
+                  </button>
+                </div>
+              </>
+            )}
+            {alertModal.type === "success" && (
+              <>
+                <div className="alert-header alert-header-success">
+                  <CheckCircle2 size={24} />
+                  <h3>{alertModal.title}</h3>
+                </div>
+                <p className="alert-message">{alertModal.message}</p>
+                <div className="alert-actions">
+                  <button className="alert-btn alert-btn-primary" onClick={alertModal.onClose}>
+                    OK
+                  </button>
+                </div>
+              </>
+            )}
+            {alertModal.type === "error" && (
+              <>
+                <div className="alert-header alert-header-error">
+                  <AlertCircle size={24} />
+                  <h3>{alertModal.title}</h3>
+                </div>
+                <p className="alert-message">{alertModal.message}</p>
+                <div className="alert-actions">
+                  <button className="alert-btn alert-btn-primary" onClick={alertModal.onClose}>
+                    OK
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

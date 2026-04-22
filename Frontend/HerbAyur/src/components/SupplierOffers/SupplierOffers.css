@@ -903,3 +903,135 @@ width:fit-content;
   font-size: 0.78rem;
   color: #9ca3af;
 }
+
+/* ALERT MODAL */
+.alert-modal-card {
+  background: white;
+  padding: 28px;
+  border-radius: 16px;
+  width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.alert-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.alert-header-warning {
+  color: #92400e;
+}
+
+.alert-header-warning svg {
+  color: #f59e0b;
+}
+
+.alert-header-success {
+  color: #166534;
+}
+
+.alert-header-success svg {
+  color: #22c55e;
+}
+
+.alert-header-error {
+  color: #7f1d1d;
+}
+
+.alert-header-error svg {
+  color: #ef4444;
+}
+
+.alert-message {
+  margin: 16px 0 24px 0;
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.alert-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.alert-btn {
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alert-btn-primary {
+  background: #2e7d32;
+  color: white;
+}
+
+.alert-btn-primary:hover {
+  background: #1b5e20;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+.alert-btn-confirm {
+  background: #ef4444;
+  color: white;
+}
+
+.alert-btn-confirm:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.alert-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.alert-btn-cancel:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .alert-modal-card {
+    width: 90%;
+    padding: 20px;
+  }
+
+  .alert-actions {
+    flex-direction: column;
+  }
+
+  .alert-btn {
+    width: 100%;
+  }
+}
