@@ -93,6 +93,7 @@ function RequestForm() {
     if (!listName.trim()) { setValidationMsg("Please enter a list name."); return false; }
     if (!requiredDate)    { setValidationMsg("Please select a required date."); return false; }
     if (requiredDate <= new Date().toISOString().split("T")[0]) { setValidationMsg("Required date must be at least tomorrow."); return false; }
+    if (!/^0\d{9}$/.test(customer.phone)) { setValidationMsg("Phone number must be 10 digits and start with 0."); return false; }
     for (const m of materials) {
       if (!m.name.trim())                    { setValidationMsg("All materials must have a name."); return false; }
       if (!m.quantity || Number(m.quantity) <= 0) { setValidationMsg("All materials must have a valid quantity (> 0)."); return false; }
@@ -151,7 +152,17 @@ function RequestForm() {
                     <div className="form-group" key={f.name}>
                       <label>{f.icon} {f.label}</label>
                       {isEditingCustomer
-                        ? <input name={f.name} value={customer[f.name]}
+                        ? <input
+                            name={f.name}
+                            value={customer[f.name]}
+                            maxLength={f.name === "phone" ? 10 : undefined}
+                            inputMode={f.name === "phone" ? "numeric" : undefined}
+                            placeholder={f.name === "phone" ? "07XXXXXXXX" : undefined}
+                            onKeyDown={e => {
+                              const nav = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab'];
+                              if (f.name === "name" && !/[a-zA-Z\s]/.test(e.key) && !nav.includes(e.key)) e.preventDefault();
+                              if (f.name === "phone" && !/[0-9]/.test(e.key) && !nav.includes(e.key)) e.preventDefault();
+                            }}
                             onChange={e => setCustomer(p => ({ ...p, [f.name]: e.target.value }))}/>
                         : <div className="readonly-value">{customer[f.name]}</div>}
                     </div>

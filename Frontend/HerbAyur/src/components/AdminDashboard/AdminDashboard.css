@@ -596,3 +596,109 @@
 .status-pending    { background: #fef9c3; color: #854d0e; }
 .status-processing { background: #dbeafe; color: #1e40af; }
 .status-completed  { background: #dcfce7; color: #166534; }
+
+/* ── ADMIN MODAL (shared) ── */
+.adm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+
+.adm-modal-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2.2rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+  animation: adm-modal-in 0.2s ease;
+}
+
+@keyframes adm-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.adm-modal-danger { border-top: 5px solid #ef4444; }
+
+.adm-modal-icon {
+  font-size: 3rem;
+  margin-bottom: 0.8rem;
+  line-height: 1;
+}
+
+.adm-modal-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1a3c34;
+  margin: 0 0 0.6rem;
+}
+
+.adm-modal-body {
+  font-size: 0.9rem;
+  color: #374151;
+  margin: 0 0 0.4rem;
+  line-height: 1.5;
+}
+
+.adm-modal-warning {
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.adm-modal-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.83rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.adm-modal-actions {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.adm-modal-btn-cancel {
+  padding: 0.6rem 1.4rem;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.adm-modal-btn-cancel:hover { background: #f3f4f6; border-color: #d1d5db; }
+.adm-modal-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.adm-modal-btn-danger {
+  padding: 0.6rem 1.4rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.adm-modal-btn-danger:hover { background: linear-gradient(135deg, #b91c1c, #dc2626); }
+.adm-modal-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }

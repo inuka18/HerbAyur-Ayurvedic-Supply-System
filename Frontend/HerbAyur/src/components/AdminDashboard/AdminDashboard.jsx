@@ -55,9 +55,12 @@ export default function AdminDashboard() {
   const [supSearch, setSupSearch]     = useState("");
   const [supStatus, setSupStatus]     = useState("All");
 
-  const [warnModal, setWarnModal]   = useState(null); // { supplierId, name }
+  const [warnModal, setWarnModal]   = useState(null);
   const [warnMsg, setWarnMsg]       = useState("");
   const [warnLoading, setWarnLoading] = useState(false);
+  const [removeModal, setRemoveModal] = useState(null); // { userId, name }
+  const [removeError, setRemoveError] = useState("");
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -126,12 +129,16 @@ export default function AdminDashboard() {
     fetchSuppliers();
   };
 
-  const removeUser = async (userId, name) => {
-    if (!window.confirm(`Remove "${name}" from the system? This cannot be undone.`)) return;
-    await fetch(`${API_BASE}/auth/remove/${userId}`, {
+  const removeUser = async () => {
+    setRemoveLoading(true); setRemoveError("");
+    const res  = await fetch(`${API_BASE}/auth/remove/${removeModal.userId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token()}` },
     });
+    const data = await res.json();
+    setRemoveLoading(false);
+    if (!res.ok) { setRemoveError(data.message); return; }
+    setRemoveModal(null);
     fetchSuppliers();
   };
 
@@ -361,7 +368,7 @@ export default function AdminDashboard() {
                         <td className="action-btns">
                           {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
                           <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
-                          <button className="btn-remove" onClick={() => removeUser(s._id, `${s.firstName} ${s.lastName}`)}>🗑 Remove</button>
+                          <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
                         </td>
                       </tr>
                     ))}
@@ -481,6 +488,25 @@ export default function AdminDashboard() {
             </div>
           )
         ) : <AdminReport />
+      )}
+
+      {/* REMOVE MODAL */}
+      {removeModal && (
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-card adm-modal-danger">
+            <div className="adm-modal-icon">🗑️</div>
+            <h3 className="adm-modal-title">Remove Supplier</h3>
+            <p className="adm-modal-body">Are you sure you want to remove <strong>{removeModal.name}</strong> from the system?</p>
+            <p className="adm-modal-warning">⚠ This action cannot be undone.</p>
+            {removeError && <div className="adm-modal-error">{removeError}</div>}
+            <div className="adm-modal-actions">
+              <button className="adm-modal-btn-cancel" onClick={() => { setRemoveModal(null); setRemoveError(""); }} disabled={removeLoading}>Cancel</button>
+              <button className="adm-modal-btn-danger" onClick={removeUser} disabled={removeLoading}>
+                {removeLoading ? "Removing..." : "Yes, Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* WARNING MODAL */}

@@ -62,6 +62,10 @@ function Signup() {
       setError("Please enter a valid email address.");
       return false;
     }
+    if (role === "supplier" && !certFile) {
+      setError("Business certification is required for supplier registration.");
+      return false;
+    }
     return true;
   };
 
