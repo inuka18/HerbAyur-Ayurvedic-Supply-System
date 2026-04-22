@@ -326,6 +326,23 @@ router.delete("/remove/:userId", auth, async (req, res) => {
     const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.role === "admin") return res.status(403).json({ message: "Cannot remove admin." });
+
+    const Order = require("../models/Order");
+    const field = user.role === "customer" ? "customerId" : "supplierId";
+    const activeOrder = await Order.findOne({
+      [field]: user._id,
+      $or: [
+        { orderStatus: { $in: ["Confirmed", "Processing"] } },
+        { paymentStatus: "Pending" },
+      ],
+    });
+    if (activeOrder) {
+      const reason = activeOrder.paymentStatus === "Pending"
+        ? `Cannot remove: this user has a pending COD payment for order #${activeOrder.receiptNo}.`
+        : `Cannot remove: this user has an active order #${activeOrder.receiptNo} (${activeOrder.orderStatus}).`;
+      return res.status(400).json({ message: reason });
+    }
+
     await User.findByIdAndDelete(req.params.userId);
     res.json({ message: `${user.firstName} ${user.lastName} removed from system.` });
   } catch (err) { res.status(500).json({ message: err.message }); }
