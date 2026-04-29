@@ -155,12 +155,30 @@
   gap: 10px;
 }
 
+.footer-social-icon{
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8f5e9;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.25);
+  cursor: default;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
 .footer-socials svg{
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
   transition: 0.3s;
 }
 
-.footer-socials svg:hover{
-  transform: scale(1.2);
+.footer-social-icon:hover{
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.22);
 }
 
 /* BOTTOM */

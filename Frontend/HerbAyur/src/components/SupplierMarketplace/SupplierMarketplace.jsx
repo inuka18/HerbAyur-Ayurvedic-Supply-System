@@ -198,7 +198,7 @@ function SupplierMarketplace() {
           <span className="sm-stat-label">Accepted Offers</span>
         </div>
         <div className="sm-stat-divider"/>
-        <div className="sm-stat">
+        <div className="sm-stat sm-stat-card-rejected">
           <span className="sm-stat-num sm-stat-rejected">{rejectedOffers}</span>
           <span className="sm-stat-label">Rejected Offers</span>
         </div>
