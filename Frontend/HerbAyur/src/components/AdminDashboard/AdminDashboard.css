@@ -177,8 +177,9 @@
 /* ── CHARTS ── */
 .adm-charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.4rem;
+  align-items: stretch;
 }
 
 .adm-chart-card {
@@ -187,6 +188,7 @@
   padding: 1.6rem;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   border: 1px solid #f0f0f0;
+  min-height: 320px;
 }
 
 .adm-chart-card h3 {
@@ -198,8 +200,13 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.adm-chart-wide { grid-column: span 2; }
-@media (max-width: 700px) { .adm-chart-wide { grid-column: span 1; } }
+@media (max-width: 1200px) {
+  .adm-charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  .adm-charts-grid { grid-template-columns: 1fr; }
+}
 
 /* ── TABLE WRAP ── */
 .admin-table-wrap {

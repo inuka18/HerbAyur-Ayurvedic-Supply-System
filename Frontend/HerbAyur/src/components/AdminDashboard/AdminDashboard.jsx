@@ -54,6 +54,8 @@ export default function AdminDashboard() {
   const [ordDate, setOrdDate]         = useState("");
   const [supSearch, setSupSearch]     = useState("");
   const [supStatus, setSupStatus]     = useState("All");
+  const [msgSearch, setMsgSearch]     = useState("");
+  const [msgRole, setMsgRole]         = useState("All");
 
   const [warnModal, setWarnModal]   = useState(null);
   const [warnMsg, setWarnMsg]       = useState("");
@@ -75,6 +77,10 @@ export default function AdminDashboard() {
       setAdminOrders(Array.isArray(oRes) ? oRes : []);
       setRequests(Array.isArray(rRes) ? rRes : []);
       setStats(stRes);
+      fetch(`${API_BASE}/contact`, { headers: { Authorization: `Bearer ${token()}` } })
+        .then(r => r.json())
+        .then((mRes) => setMessages(Array.isArray(mRes) ? mRes : []))
+        .catch(() => setMessages([]));
     } catch {}
     setLoading(false);
   };
@@ -180,6 +186,28 @@ export default function AdminDashboard() {
     name:m, value: adminOrders.filter(o=>o.paymentMethod===m).length,
   })).filter(d=>d.value>0);
 
+  const requestCompletionData = [
+    { name: "Open", value: requests.filter(r => !r.fullyCompleted).length },
+    { name: "Completed", value: requests.filter(r => r.fullyCompleted).length },
+  ].filter(d => d.value > 0);
+
+  const messageRoleData = [
+    { name: "Customer", value: messages.filter(m => m.role === "customer").length },
+    { name: "Supplier", value: messages.filter(m => m.role === "supplier").length },
+    { name: "Guest", value: messages.filter(m => !m.role || m.role === "guest").length },
+  ].filter(d => d.value > 0);
+
+  const filteredMessages = messages.filter((m) => {
+    const matchRole = msgRole === "All" || (m.role || "guest") === msgRole;
+    const q = msgSearch.toLowerCase().trim();
+    const matchSearch =
+      !q ||
+      (m.name || "").toLowerCase().includes(q) ||
+      (m.email || "").toLowerCase().includes(q) ||
+      (m.message || "").toLowerCase().includes(q);
+    return matchRole && matchSearch;
+  });
+
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
@@ -261,22 +289,61 @@ export default function AdminDashboard() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Requests vs Orders Line */}
-              <div className="adm-chart-card adm-chart-wide">
+              {/* Request Completion */}
+              <div className="adm-chart-card">
+                <h3>Request Completion</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  {requestCompletionData.length > 0 ? (
+                    <PieChart>
+                      <Pie data={requestCompletionData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name,value})=>`${name}: ${value}`}>
+                        {requestCompletionData.map((_,i)=><Cell key={i} fill={["#f59e0b","#22c55e"][i%2]}/>)}
+                      </Pie>
+                      <Tooltip/><Legend/>
+                    </PieChart>
+                  ) : (
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "0.9rem" }}>
+                      No request data
+                    </div>
+                  )}
+                </ResponsiveContainer>
+              </div>
+
+              {/* Message Roles */}
+              <div className="adm-chart-card">
+                <h3>Message Roles</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  {messageRoleData.length > 0 ? (
+                    <PieChart>
+                      <Pie data={messageRoleData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name,value})=>`${name}: ${value}`}>
+                        {messageRoleData.map((_,i)=><Cell key={i} fill={["#3b82f6","#f59e0b","#8b5cf6"][i%3]}/>)}
+                      </Pie>
+                      <Tooltip/><Legend/>
+                    </PieChart>
+                  ) : (
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "0.9rem" }}>
+                      No message data
+                    </div>
+                  )}
+                </ResponsiveContainer>
+              </div>
+
+              {/* Requests vs Orders */}
+              <div className="adm-chart-card">
                 <h3>Platform Activity</h3>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={[
                     { name:"Requests", value: requests.length },
                     { name:"Orders",   value: adminOrders.length },
                     { name:"Suppliers",value: stats?.totalSuppliers||0 },
                     { name:"Customers",value: stats?.totalCustomers||0 },
+                    { name:"Messages", value: messages.length },
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                     <XAxis dataKey="name" tick={{fontSize:12}}/>
                     <YAxis tick={{fontSize:12}}/>
                     <Tooltip/>
                     <Bar dataKey="value" radius={[6,6,0,0]}>
-                      {["#22c55e","#8b5cf6","#f59e0b","#3b82f6"].map((c,i)=><Cell key={i} fill={c}/>)}
+                      {["#22c55e","#8b5cf6","#f59e0b","#3b82f6","#ef4444"].map((c,i)=><Cell key={i} fill={c}/>)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -344,7 +411,7 @@ export default function AdminDashboard() {
                             <span className="supplier-name">{s.firstName} {s.lastName}</span>
                             <div className="supplier-tags">
                               {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
-                            {s.warnings?.length > 0 && (
+                              {s.warnings?.length > 0 && (
                                 s.warnings.map((w, wi) => (
                                   <span key={wi} className="warn-count-tag">
                                     <span className="warn-tag-icon">⚠️</span>
@@ -382,10 +449,24 @@ export default function AdminDashboard() {
         ) : tab==="messages" ? (
           messages.length===0 ? <div className="admin-state">No messages yet.</div> : (
             <div className="admin-table-wrap">
+              <div className="adm-filter-bar">
+                <input
+                  className="adm-search"
+                  placeholder="🔍 Search by name, email or message..."
+                  value={msgSearch}
+                  onChange={(e) => setMsgSearch(e.target.value)}
+                />
+                <select className="adm-filter-select" value={msgRole} onChange={(e) => setMsgRole(e.target.value)}>
+                  <option value="All">All Roles</option>
+                  <option value="customer">Customer</option>
+                  <option value="supplier">Supplier</option>
+                  <option value="guest">Guest</option>
+                </select>
+              </div>
               <table className="admin-table">
                 <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
                 <tbody>
-                  {messages.map((m,i)=>(
+                  {filteredMessages.map((m,i)=>(
                     <tr key={m._id}>
                       <td>{i+1}</td><td>{m.name}</td>
                       <td><span className={`status-badge status-${m.role==="customer"?"approved":m.role==="supplier"?"pending":"rejected"}`} style={{textTransform:"capitalize"}}>
@@ -396,6 +477,13 @@ export default function AdminDashboard() {
                       <td style={{whiteSpace:"nowrap"}}>{new Date(m.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
+                  {filteredMessages.length===0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: "1.2rem" }}>
+                        No messages match the selected filters.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
