@@ -9,6 +9,7 @@ import DemandPredictions from "../Predictions/DemandPredictions";
 import { SupplierPayment } from "../PaymentDashboard/PaymentDashboard";
 import API_BASE from "../../api";
 import "./SupplierDashboard.css";
+import "./Payments/PaymentDashboard.css";
 
 const TABS = [
   { id: "marketplace", label: "🛒 Marketplace" },

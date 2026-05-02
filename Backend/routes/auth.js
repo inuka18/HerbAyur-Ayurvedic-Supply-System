@@ -299,6 +299,38 @@ router.post("/warn/:userId", auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// PATCH — supplier marks a warning as seen
+router.patch("/my-warning/:warningIndex/seen", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "supplier") return res.status(403).json({ message: "Forbidden" });
+    const user = await User.findById(req.user.id);
+    const idx = Number(req.params.warningIndex);
+    if (isNaN(idx) || idx < 0 || idx >= (user.warnings || []).length)
+      return res.status(400).json({ message: "Invalid warning index." });
+    const warningMsg = user.warnings[idx].message;
+    user.warnings[idx].seenAt = new Date();
+    await user.save();
+    const admin = await User.findOne({ role: "admin" });
+    await Promise.all([
+      admin && Notification.create({
+        recipient:     admin._id,
+        recipientRole: "admin",
+        message:       `✅ Supplier "${user.firstName} ${user.lastName}" confirmed they have seen the warning: "${warningMsg}"`,
+        type:          "warning_seen",
+        relatedId:     user._id,
+      }),
+      Notification.create({
+        recipient:     user._id,
+        recipientRole: "supplier",
+        message:       `✅ You confirmed you have seen the warning: "${warningMsg}"`,
+        type:          "warning_seen",
+        relatedId:     user._id,
+      }),
+    ]);
+    res.json({ warnings: user.warnings });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // DELETE — admin removes a specific warning from a supplier
 router.delete("/warn/:userId/:warningIndex", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });

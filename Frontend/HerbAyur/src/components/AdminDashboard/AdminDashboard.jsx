@@ -37,10 +37,12 @@ function StatCard({ icon, label, value, color }) {
 export default function AdminDashboard() {
   const location = useLocation();
   const [tab, setTab]               = useState(location.state?.tab || "overview");
+  const [pendingSupplierId, setPendingSupplierId] = useState(location.state?.supplierId || null);
 
   useEffect(() => {
     if (location.state?.tab) setTab(location.state.tab);
-  }, [location.state?.tab]);
+    if (location.state?.supplierId) setPendingSupplierId(location.state.supplierId);
+  }, [location.state?.tab, location.state?.supplierId]);
   const [suppliers, setSuppliers]   = useState([]);
   const [ratings, setRatings]       = useState({});
   const [messages, setMessages]     = useState([]);
@@ -64,6 +66,7 @@ export default function AdminDashboard() {
   const [removeError, setRemoveError] = useState("");
   const [removeLoading, setRemoveLoading] = useState(false);
   const [openWarningFor, setOpenWarningFor] = useState(null);
+  const [focusedSupplierId, setFocusedSupplierId] = useState(null);
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -183,6 +186,26 @@ export default function AdminDashboard() {
 
   const pendingCount = suppliers.filter(s=>s.status==="pending").length;
   const activeWarningSupplier = suppliers.find(s => s._id === openWarningFor) || null;
+
+  // Auto-open warning popup once suppliers are loaded from notification navigation
+  useEffect(() => {
+    if (pendingSupplierId && suppliers.length > 0) {
+      setSupSearch("");
+      setSupStatus("All");
+      setOpenWarningFor(pendingSupplierId);
+      setFocusedSupplierId(pendingSupplierId);
+      setPendingSupplierId(null);
+    }
+  }, [suppliers, pendingSupplierId]);
+
+  useEffect(() => {
+    if (tab !== "suppliers" || !focusedSupplierId) return;
+    const row = document.getElementById(`supplier-row-${focusedSupplierId}`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = setTimeout(() => setFocusedSupplierId(null), 2500);
+    return () => clearTimeout(timer);
+  }, [tab, focusedSupplierId, suppliers, supSearch, supStatus]);
 
   // Chart data
   const supplierStatusData = stats ? [
@@ -407,56 +430,60 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <table className="admin-table">
-                  <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Certification</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {suppliers
-                      .filter(s => {
-                        const matchStatus = supStatus === "All" || s.status === supStatus;
-                        const q = supSearch.toLowerCase();
-                        const matchSearch = !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) || s.companyName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
-                        return matchStatus && matchSearch;
-                      })
-                      .map((s,i)=>(
-                      <tr key={s._id}>
-                        <td>{i+1}</td>
-                        <td>
-                          <div className="supplier-name-cell">
-                            <span className="supplier-name">{s.firstName} {s.lastName}</span>
-                            <div className="supplier-tags">
-                              {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
-                              {s.warnings?.length > 0 && (
-                                <div className="warning-summary-wrap">
-                                  <button
-                                    type="button"
-                                    className="warning-summary-btn"
-                                    title={`${s.warnings.length} warning(s)`}
-                                    onClick={() => setOpenWarningFor(openWarningFor === s._id ? null : s._id)}
-                                  >
-                                    <span className="warning-summary-icon">⚠️</span>
-                                    <span className="warning-summary-count">{s.warnings.length}</span>
-                                  </button>
-                                </div>
-                              )}
+                    <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Certification</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {suppliers
+                        .filter(s => {
+                          const matchStatus = supStatus === "All" || s.status === supStatus;
+                          const q = supSearch.toLowerCase();
+                          const matchSearch = !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) || s.companyName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+                          return matchStatus && matchSearch;
+                        })
+                        .map((s,i)=>(
+                        <tr
+                          key={s._id}
+                          id={`supplier-row-${s._id}`}
+                          className={focusedSupplierId === s._id ? "supplier-row-focus" : ""}
+                        >
+                          <td>{i+1}</td>
+                          <td>
+                            <div className="supplier-name-cell">
+                              <span className="supplier-name">{s.firstName} {s.lastName}</span>
+                              <div className="supplier-tags">
+                                {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
+                                {s.warnings?.length > 0 && (
+                                  <div className="warning-summary-wrap">
+                                    <button
+                                      type="button"
+                                      className="warning-summary-btn"
+                                      title={`${s.warnings.length} warning(s)`}
+                                      onClick={() => setOpenWarningFor(openWarningFor === s._id ? null : s._id)}
+                                    >
+                                      <span className="warning-summary-icon">⚠️</span>
+                                      <span className="warning-summary-count">{s.warnings.length}</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>{s.companyName||"—"}</td>
-                        <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
-                        <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
-                        <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
-                        <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
-                        <td className="action-btns">
-                          {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
-                          {s.status !== "pending" && (
-                            <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
-                          )}
-                          {s.status !== "pending" && (
-                            <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                          </td>
+                          <td>{s.companyName||"—"}</td>
+                          <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
+                          <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
+                          <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
+                          <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
+                          <td className="action-btns">
+                            {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
+                            {s.status !== "pending" && (
+                              <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
+                            )}
+                            {s.status !== "pending" && (
+                              <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
                 </table>
               </div>
             </>
@@ -481,27 +508,27 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
-                <tbody>
-                  {filteredMessages.map((m,i)=>(
-                    <tr key={m._id}>
-                      <td>{i+1}</td><td>{m.name}</td>
-                      <td><span className={`status-badge status-${m.role==="customer"?"approved":m.role==="supplier"?"pending":"rejected"}`} style={{textTransform:"capitalize"}}>
-                        {m.role==="customer"?"👤 Customer":m.role==="supplier"?"🏭 Supplier":"🌐 Guest"}
-                      </span></td>
-                      <td>{m.email}</td>
-                      <td style={{maxWidth:"400px",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.message}</td>
-                      <td style={{whiteSpace:"nowrap"}}>{new Date(m.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {filteredMessages.length===0 && (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: "1.2rem" }}>
-                        No messages match the selected filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+                  <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
+                  <tbody>
+                    {filteredMessages.map((m,i)=>(
+                      <tr key={m._id}>
+                        <td>{i+1}</td><td>{m.name}</td>
+                        <td><span className={`status-badge status-${m.role==="customer"?"approved":m.role==="supplier"?"pending":"rejected"}`} style={{textTransform:"capitalize"}}>
+                          {m.role==="customer"?"👤 Customer":m.role==="supplier"?"🏭 Supplier":"🌐 Guest"}
+                        </span></td>
+                        <td>{m.email}</td>
+                        <td style={{maxWidth:"400px",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.message}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{new Date(m.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {filteredMessages.length===0 && (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: "1.2rem" }}>
+                          No messages match the selected filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
               </table>
             </div>
           )
@@ -553,42 +580,42 @@ export default function AdminDashboard() {
                 <input className="adm-filter-select" type="date" value={ordDate} onChange={e => setOrdDate(e.target.value)} title="Filter by date"/>
               </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
-                <tbody>
-                  {adminOrders
-                    .filter(o => {
-                      const matchStatus  = ordStatus  === "All" || o.orderStatus   === ordStatus;
-                      const matchPayment = ordPayment === "All" || o.paymentMethod === ordPayment;
-                      const q = ordSearch.toLowerCase();
-                      const matchSearch  = !q ||
-                        `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
-                        (o.supplierId?.companyName || `${o.supplierId?.firstName} ${o.supplierId?.lastName}`).toLowerCase().includes(q) ||
-                        o.listName?.toLowerCase().includes(q) ||
-                        o.receiptNo?.toLowerCase().includes(q);
-                      const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
-                      const matchDate = !ordDate || d === ordDate;
-                      return matchStatus && matchPayment && matchSearch && matchDate;
-                    })
-                    .map((o,i)=>(
-                    <tr key={o._id}>
-                      <td>{i+1}</td>
-                      <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"#6b7280"}}>#{o.receiptNo}</td>
-                      <td><div style={{fontWeight:600}}>{o.customerId?.firstName} {o.customerId?.lastName}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.phone}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.address}</div></td>
-                      <td><div style={{fontWeight:600}}>{o.supplierId?.companyName||`${o.supplierId?.firstName} ${o.supplierId?.lastName}`}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.supplierId?.phone}</div></td>
-                      <td>{o.listName||"—"}</td>
-                      <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
-                      <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
-                      <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
-                      <td><span className={`status-badge ${
-                        o.paymentStatus === "COD Confirmed" ? "status-approved" :
-                        o.paymentStatus === "Paid"          ? "status-approved" :
-                        "status-pending"
-                      }`}>{o.paymentStatus}</span></td>
-                      <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
-                      <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                  <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {adminOrders
+                      .filter(o => {
+                        const matchStatus  = ordStatus  === "All" || o.orderStatus   === ordStatus;
+                        const matchPayment = ordPayment === "All" || o.paymentMethod === ordPayment;
+                        const q = ordSearch.toLowerCase();
+                        const matchSearch  = !q ||
+                          `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
+                          (o.supplierId?.companyName || `${o.supplierId?.firstName} ${o.supplierId?.lastName}`).toLowerCase().includes(q) ||
+                          o.listName?.toLowerCase().includes(q) ||
+                          o.receiptNo?.toLowerCase().includes(q);
+                        const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+                        const matchDate = !ordDate || d === ordDate;
+                        return matchStatus && matchPayment && matchSearch && matchDate;
+                      })
+                      .map((o,i)=>(
+                      <tr key={o._id}>
+                        <td>{i+1}</td>
+                        <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"#6b7280"}}>#{o.receiptNo}</td>
+                        <td><div style={{fontWeight:600}}>{o.customerId?.firstName} {o.customerId?.lastName}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.phone}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.address}</div></td>
+                        <td><div style={{fontWeight:600}}>{o.supplierId?.companyName||`${o.supplierId?.firstName} ${o.supplierId?.lastName}`}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.supplierId?.phone}</div></td>
+                        <td>{o.listName||"—"}</td>
+                        <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
+                        <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
+                        <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
+                        <td><span className={`status-badge ${
+                          o.paymentStatus === "COD Confirmed" ? "status-approved" :
+                          o.paymentStatus === "Paid"          ? "status-approved" :
+                          "status-pending"
+                        }`}>{o.paymentStatus}</span></td>
+                        <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
+                        <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
               </table>
             </div>
           )
@@ -651,15 +678,24 @@ export default function AdminDashboard() {
             <div className="warning-popup-list">
               {activeWarningSupplier.warnings?.map((w, wi) => (
                 <div key={wi} className="warning-menu-item">
-                  <span className="warning-menu-text">{w.message || `Warning ${wi + 1}`}</span>
-                  <button
-                    type="button"
-                    className="warn-tag-remove"
-                    title="Remove warning"
-                    onClick={() => removeWarning(activeWarningSupplier._id, wi)}
-                  >
-                    ×
-                  </button>
+                  <div className="warning-menu-left">
+                    <span className="warning-menu-text">{w.message || `Warning ${wi + 1}`}</span>
+                    <span className="warning-menu-date">{w.issuedAt ? new Date(w.issuedAt).toLocaleDateString() : ""}</span>
+                  </div>
+                  <div className="warning-menu-right">
+                    {w.seenAt
+                      ? <span className="warning-seen-badge">✅ Seen {new Date(w.seenAt).toLocaleDateString()}</span>
+                      : <span className="warning-unseen-badge">👁 Not seen</span>
+                    }
+                    <button
+                      type="button"
+                      className="warn-tag-remove"
+                      title="Remove warning"
+                      onClick={() => removeWarning(activeWarningSupplier._id, wi)}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

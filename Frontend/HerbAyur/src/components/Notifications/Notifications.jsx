@@ -60,6 +60,11 @@ function getNavTarget(notification) {
       }
       return null;
 
+    case "warning_seen":
+      return role === "admin"
+        ? { path: "/admin", tab: "suppliers", supplierId: notification.relatedId }
+        : null;
+
     case "new_customer":
       return role === "admin" ? { path: "/admin", tab: "overview" } : null;
 
@@ -180,7 +185,7 @@ function Notifications() {
     if (!n.read) await markRead(n._id);
     const target = getNavTarget(n);
     setOpen(false);
-    if (target) navigate(target.path, { state: { tab: target.tab } });
+    if (target) navigate(target.path, { state: { tab: target.tab, supplierId: target.supplierId || null } });
   };
 
   const unread = notifications.filter(n => !n.read).length;
@@ -209,8 +214,36 @@ function Notifications() {
           <div className="warning-list-body">
             {warnings.map((w, i) => (
               <div key={`${w.issuedAt || i}-${i}`} className="warning-list-item">
-                <p>{w.message}</p>
-                <span>{w.issuedAt ? new Date(w.issuedAt).toLocaleDateString() : "—"}</span>
+                <div className="warning-list-msg">{w.message}</div>
+                <div className="warning-list-footer">
+                  <span className="warning-list-date">{w.issuedAt ? new Date(w.issuedAt).toLocaleDateString() : "—"}</span>
+                  {w.seenAt ? (
+                    <span className="warning-seen-tag">✅ Confirmed</span>
+                  ) : (
+                    <button
+                      className="warning-confirm-btn"
+                      onClick={() => {
+                        // Optimistic update — instant UI
+                        const now = new Date().toISOString();
+                        setWarnings(prev => prev.map((w2, j) => j === i ? { ...w2, seenAt: now } : w2));
+                        fetch(`${API_BASE}/auth/my-warning/${i}/seen`, {
+                          method: "PATCH",
+                          headers: { Authorization: `Bearer ${token}` },
+                        }).then(r => r.json()).then(data => {
+                          if (data.warnings) {
+                            setWarnings(data.warnings);
+                            fetchNotifications();
+                          }
+                        }).catch(() => {
+                          // revert on error
+                          setWarnings(prev => prev.map((w2, j) => j === i ? { ...w2, seenAt: null } : w2));
+                        });
+                      }}
+                    >
+                      ☑ I have seen this
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
