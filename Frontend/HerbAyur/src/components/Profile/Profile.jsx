@@ -21,15 +21,46 @@ export default function Profile() {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(data => { setProfile(data); setForm({ firstName: data.firstName, lastName: data.lastName, phone: data.phone, address: data.address, companyName: data.companyName || "" }); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    let mounted = true;
+
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!mounted) return;
+        setProfile(data);
+        if (!editing) {
+          setForm({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            address: data.address,
+            companyName: data.companyName || "",
+          });
+        }
+      } catch {}
+      finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchProfile();
+    const interval = setInterval(fetchProfile, 15000);
+    const visibilityHandler = () => {
+      if (document.visibilityState === "visible") fetchProfile();
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", visibilityHandler);
+    };
+  }, [token, editing]);
 
   const companyNameChanged = profile?.role === "supplier" && form.companyName !== (profile?.companyName || "");
   const hasPendingCompanyChange = profile?.role === "supplier" && !!profile?.pendingChanges?.submittedAt;
+  const hasActiveWarnings = profile?.role === "supplier" && (profile?.warnings?.length || 0) > 0;
 
   const nameKeyDown = (e) => {
     if (!/[a-zA-Z\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key))
@@ -104,9 +135,9 @@ export default function Profile() {
 
   return (
     <div className="prof-page">
-      <div className="prof-card">
-        <div className="prof-avatar">{profile.firstName?.[0]}{profile.lastName?.[0]}</div>
-        <div className="prof-role-badge">
+      <div className={`prof-card ${hasActiveWarnings ? "prof-card-warning" : ""}`}>
+        <div className={`prof-avatar ${hasActiveWarnings ? "prof-avatar-warning" : ""}`}>{profile.firstName?.[0]}{profile.lastName?.[0]}</div>
+        <div className={`prof-role-badge ${hasActiveWarnings ? "prof-role-badge-warning" : ""}`}>
           {profile.role === "admin" ? "🌿 Admin" : profile.role === "supplier" ? "🏭 Supplier" : "👤 Customer"}
         </div>
         {profile.role === "supplier" && (

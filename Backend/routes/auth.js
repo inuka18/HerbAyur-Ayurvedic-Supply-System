@@ -283,6 +283,8 @@ router.post("/warn/:userId", auth, async (req, res) => {
     if (!message?.trim()) return res.status(400).json({ message: "Warning message is required." });
     const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role !== "supplier") return res.status(400).json({ message: "Warnings can only be sent to suppliers." });
+    if (user.status === "pending") return res.status(400).json({ message: "Pending suppliers cannot receive warnings." });
     user.warnings = user.warnings || [];
     user.warnings.push({ message: message.trim(), issuedAt: new Date() });
     await user.save();
@@ -326,6 +328,9 @@ router.delete("/remove/:userId", auth, async (req, res) => {
     const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.role === "admin") return res.status(403).json({ message: "Cannot remove admin." });
+    if (user.role === "supplier" && user.status === "pending") {
+      return res.status(400).json({ message: "Pending suppliers cannot be removed." });
+    }
 
     const Order = require("../models/Order");
     const field = user.role === "customer" ? "customerId" : "supplierId";

@@ -1,4 +1,5 @@
 import "./Navbar.css";
+import "./NavbarWarning.css";
 import {
   LogIn, UserPlus, Send, Home, Info, Phone,
   LogOut, LayoutDashboard, User, ChevronDown
@@ -6,11 +7,13 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import Notifications from "../Notifications/Notifications";
+import API_BASE from "../../api";
 
 function Navbar() {
   const navigate = useNavigate();
   const [hoverIndex, setHoverIndex] = useState(0);
   const [dropOpen, setDropOpen] = useState(false);
+  const [warningCount, setWarningCount] = useState(0);
   const dropRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -29,6 +32,33 @@ function Navbar() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || user?.role !== "supplier") {
+      setWarningCount(0);
+      return;
+    }
+
+    const fetchWarningCount = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        setWarningCount(Array.isArray(data?.warnings) ? data.warnings.length : 0);
+      } catch {}
+    };
+
+    fetchWarningCount();
+    const interval = setInterval(fetchWarningCount, 15000);
+    const visibilityHandler = () => {
+      if (document.visibilityState === "visible") fetchWarningCount();
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", visibilityHandler);
+    };
+  }, [user?.role]);
+
+  useEffect(() => {
     const handler = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) {
         setDropOpen(false);
@@ -37,6 +67,7 @@ function Navbar() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
 
   return (
     <>
@@ -98,18 +129,18 @@ function Navbar() {
               {/* PROFILE */}
               <div className="pro-profile-wrap" ref={dropRef}>
                 <button
-                  className="pro-profile-btn"
+                  className={`pro-profile-btn ${user.role === "supplier" && warningCount > 0 ? "pro-profile-btn-warning" : ""}`}
                   onClick={() => setDropOpen(p => !p)}
                 >
-                  <div className="pro-avatar">{user.name?.[0]}</div>
-                  <span className="pro-user-label">{user.name}</span>
-                  <ChevronDown size={14} className={`pro-chevron ${dropOpen ? "open" : ""}`}/>
+                  <div className={`pro-avatar ${user.role === "supplier" && warningCount > 0 ? "pro-avatar-warning" : ""}`}>{user.name?.[0]}</div>
+                  <span className={`pro-user-label ${user.role === "supplier" && warningCount > 0 ? "pro-user-label-warning" : ""}`}>{user.name}</span>
+                  <ChevronDown size={14} className={`pro-chevron ${dropOpen ? "open" : ""} ${user.role === "supplier" && warningCount > 0 ? "pro-chevron-warning" : ""}`}/>
                 </button>
 
                 {dropOpen && (
                   <div className="pro-dropdown">
-                    <div className="pro-dropdown-header">
-                      <div className="pro-drop-avatar">{user.name?.[0]}</div>
+                    <div className={`pro-dropdown-header ${user.role === "supplier" && warningCount > 0 ? "pro-dropdown-header-warning" : ""}`}>
+                      <div className={`pro-drop-avatar ${user.role === "supplier" && warningCount > 0 ? "pro-drop-avatar-warning" : ""}`}>{user.name?.[0]}</div>
                       <div>
                         <div className="pro-drop-name">{user.name}</div>
                         <div className="pro-drop-role">{user.role}</div>

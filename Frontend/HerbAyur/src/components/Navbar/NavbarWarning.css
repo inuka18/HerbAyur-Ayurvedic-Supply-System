@@ -1,0 +1,29 @@
+.pro-profile-btn-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.pro-profile-btn-warning:hover {
+  background: #ffedd5;
+  border-color: #fb923c;
+}
+
+.pro-avatar-warning {
+  background: linear-gradient(135deg, #ea580c, #fb923c);
+}
+
+.pro-user-label-warning {
+  color: #c2410c;
+}
+
+.pro-chevron-warning {
+  color: #c2410c;
+}
+
+.pro-dropdown-header-warning {
+  background: #fff7ed;
+}
+
+.pro-drop-avatar-warning {
+  background: linear-gradient(135deg, #ea580c, #fb923c);
+}
