@@ -1,10 +1,47 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, RefreshCw, PackageOpen, X, Check, Edit2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw, PackageOpen, X, Check, Edit2, BookOpen, Pencil, Tag, Thermometer, Leaf, Scale, ChevronRight } from "lucide-react";
 import API_BASE from "../../api";
 import "./Inventory.css";
 import { CATEGORIES, CONDITIONS, PARTS, getUnits, normalizeCategory } from "../../materialOptions";
 
 const token = () => localStorage.getItem("token");
+
+const CATEGORY_EXPLANATIONS = {
+  "Raw Herb": "Natural herb in its original form (fresh plant material).",
+  "Dried Herb": "Herb that has been dried for longer shelf life.",
+  Powder: "Herb ground into fine powder form.",
+  Oil: "Liquid oil extracted from herbs/seeds/plants.",
+  Extract: "Concentrated form of active herbal compounds.",
+  Paste: "Thick semi-solid herbal preparation.",
+  Juice: "Liquid pressed directly from fresh herbs.",
+  Capsule: "Herbal medicine packed in capsule form.",
+  Tablet: "Herbal medicine compressed as tablets.",
+  Syrup: "Liquid herbal medicine mixed as syrup.",
+  Decoction: "Boiled herbal liquid preparation.",
+};
+
+const CONDITION_EXPLANATIONS = {
+  Fresh: "Recently harvested, not dried or processed.",
+  Cleaned: "Washed/cleaned and ready for use.",
+  Whole: "Kept complete, not cut or broken.",
+  "Cut / Sliced": "Cut into smaller pieces or slices.",
+  Crushed: "Roughly broken or crushed form.",
+  "Dried – Sun Dried": "Dried naturally under sunlight.",
+  "Dried – Shade Dried": "Dried in shade to protect active compounds.",
+  "Dried – Oven Dried": "Dried with controlled machine heat.",
+};
+
+const PART_EXPLANATIONS = {
+  Root: "Underground part of the plant (e.g., ginger root).",
+  Leaf: "Leaves used for medicine or processing.",
+  Stem: "Main stalk/stem part of the plant.",
+  Bark: "Outer protective layer of tree stems.",
+  Flower: "Flower portion used in remedies.",
+  Fruit: "Fruit part used as raw material.",
+  Seed: "Seeds used for oil, powder, or direct use.",
+  "Whole Plant": "Entire plant is used.",
+  "Latex / Sap": "Natural fluid obtained from plant tissues.",
+};
 
 function Inventory() {
   const [items, setItems]         = useState([]);
@@ -13,6 +50,7 @@ function Inventory() {
   const [editItem, setEditItem]   = useState(null);
   const [restockId, setRestockId] = useState(null);
   const [restockQty, setRestockQty] = useState("");
+  const [showQuickBook, setShowQuickBook] = useState(false);
   const [form, setForm] = useState({ name: "", category: "Raw Herb", condition: "Fresh", parts: "Whole", quantity: "", unit: "kg", price: "", aliases: "" });
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
@@ -155,8 +193,99 @@ function Inventory() {
           <h2><PackageOpen size={22}/> My Inventory</h2>
           <p className="inv-sub">Manage your stock. Items are reserved when you confirm supply and restored if the offer is rejected or cancelled.</p>
         </div>
-        <button className="inv-add-btn" onClick={openAdd}><Plus size={16}/> Add Item</button>
+        <div className="inv-header-actions">
+          <button className="inv-quick-book-btn" onClick={() => setShowQuickBook(true)}>
+            <BookOpen size={16}/> Quick Book
+          </button>
+          <button className="inv-add-btn" onClick={openAdd}><Plus size={16}/> Add Item</button>
+        </div>
       </div>
+
+      {showQuickBook && (
+        <div className="inv-guide-overlay" onClick={() => setShowQuickBook(false)}>
+          <div className="inv-guide-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="inv-guide-header">
+              <div className="inv-guide-header-left">
+                <div className="inv-guide-icon"><BookOpen size={20}/></div>
+                <div>
+                  <h3>Add Item Form Manual</h3>
+                  <p>Use this quick book to fill category, condition, part, quantity, and unit correctly.</p>
+                </div>
+              </div>
+              <button className="inv-guide-close" onClick={() => setShowQuickBook(false)} aria-label="Close guide">
+                <X size={16}/>
+              </button>
+            </div>
+
+            <div className="inv-guide-body">
+              <div className="inv-guide-step">
+                <div className="inv-guide-step-badge"><Pencil size={12}/> Step 1</div>
+                <h4>Enter Item Name</h4>
+                <p>Use the real herb/material name you are adding to stock.</p>
+                <div className="inv-guide-tip"><ChevronRight size={13}/> Example: Ginger, Neem Leaves, Cinnamon Bark</div>
+              </div>
+
+              <div className="inv-guide-step">
+                <div className="inv-guide-step-badge"><Tag size={12}/> Step 2</div>
+                <h4>Select Category</h4>
+                <p>Category is the final form of the product.</p>
+                <div className="inv-guide-option-list">
+                  {CATEGORIES.map((category) => (
+                    <div key={category} className="inv-guide-option">
+                      <span className="inv-guide-chip">{category}</span>
+                      <span>{CATEGORY_EXPLANATIONS[category] || "Select the best matching product form."}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="inv-guide-step">
+                <div className="inv-guide-step-badge"><Thermometer size={12}/> Step 3</div>
+                <h4>Select Condition</h4>
+                <p>Condition is the physical state of the material.</p>
+                <div className="inv-guide-option-list">
+                  {CONDITIONS.map((condition) => (
+                    <div key={condition} className="inv-guide-option">
+                      <span className="inv-guide-chip">{condition}</span>
+                      <span>{CONDITION_EXPLANATIONS[condition] || "Select the current physical state."}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="inv-guide-step">
+                <div className="inv-guide-step-badge"><Leaf size={12}/> Step 4</div>
+                <h4>Select Part</h4>
+                <p>Part shows which part of the plant/material is used.</p>
+                <div className="inv-guide-option-list">
+                  {PARTS.map((part) => (
+                    <div key={part} className="inv-guide-option">
+                      <span className="inv-guide-chip">{part}</span>
+                      <span>{PART_EXPLANATIONS[part] || "Select the plant part used for this item."}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="inv-guide-step">
+                <div className="inv-guide-step-badge"><Scale size={12}/> Step 5</div>
+                <h4>Enter Quantity and Unit</h4>
+                <p>Type quantity as a number, then choose unit based on category.</p>
+                <div className="inv-guide-unit-table">
+                  <div className="inv-guide-unit-row inv-guide-unit-head"><span>Category</span><span>Allowed Units</span></div>
+                  {CATEGORIES.map((category) => (
+                    <div key={`${category}-units`} className="inv-guide-unit-row">
+                      <span>{category}</span>
+                      <span>{getUnits(category).join(", ")}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="inv-guide-tip"><ChevronRight size={13}/> 2 kg ginger → Qty: 2, Unit: kg | 500 ml oil → Qty: 500, Unit: ml</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {success && <div className="inv-success">✅ {success}</div>}
 
