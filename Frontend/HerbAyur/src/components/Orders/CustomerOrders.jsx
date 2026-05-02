@@ -304,7 +304,7 @@ export default function CustomerOrders() {
           <span className="sm-stat-label">Delivered</span>
         </div>
         <div className="sm-stat-divider"/>
-        <div className="sm-stat">
+        <div className="sm-stat sm-stat-card-total-spent">
           <span className="sm-stat-num">Rs {orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString()}</span>
           <span className="sm-stat-label">Total Spent</span>
         </div>
