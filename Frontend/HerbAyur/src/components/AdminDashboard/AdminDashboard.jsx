@@ -63,6 +63,7 @@ export default function AdminDashboard() {
   const [removeModal, setRemoveModal] = useState(null); // { userId, name }
   const [removeError, setRemoveError] = useState("");
   const [removeLoading, setRemoveLoading] = useState(false);
+  const [openWarningFor, setOpenWarningFor] = useState(null);
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -169,7 +170,19 @@ export default function AdminDashboard() {
     fetchSuppliers();
   };
 
+  const removeAllWarnings = async (supplierId, warningsCount) => {
+    for (let wi = warningsCount - 1; wi >= 0; wi -= 1) {
+      await fetch(`${API_BASE}/auth/warn/${supplierId}/${wi}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+    }
+    setOpenWarningFor(null);
+    fetchSuppliers();
+  };
+
   const pendingCount = suppliers.filter(s=>s.status==="pending").length;
+  const activeWarningSupplier = suppliers.find(s => s._id === openWarningFor) || null;
 
   // Chart data
   const supplierStatusData = stats ? [
@@ -412,17 +425,17 @@ export default function AdminDashboard() {
                             <div className="supplier-tags">
                               {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
                               {s.warnings?.length > 0 && (
-                                s.warnings.map((w, wi) => (
-                                  <span key={wi} className="warn-count-tag">
-                                    <span className="warn-tag-icon">⚠️</span>
-                                    Warning {wi + 1}
-                                    <button
-                                      className="warn-tag-remove"
-                                      title={w.message}
-                                      onClick={() => removeWarning(s._id, wi)}
-                                    >×</button>
-                                  </span>
-                                ))
+                                <div className="warning-summary-wrap">
+                                  <button
+                                    type="button"
+                                    className="warning-summary-btn"
+                                    title={`${s.warnings.length} warning(s)`}
+                                    onClick={() => setOpenWarningFor(openWarningFor === s._id ? null : s._id)}
+                                  >
+                                    <span className="warning-summary-icon">⚠️</span>
+                                    <span className="warning-summary-count">{s.warnings.length}</span>
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -434,8 +447,12 @@ export default function AdminDashboard() {
                         <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
                         <td className="action-btns">
                           {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
-                          <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
-                          <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
+                          {s.status !== "pending" && (
+                            <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
+                          )}
+                          {s.status !== "pending" && (
+                            <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -615,6 +632,44 @@ export default function AdminDashboard() {
               <button onClick={sendWarning} disabled={warnLoading || !warnMsg.trim()}
                 style={{ background: warnMsg.trim() ? "linear-gradient(135deg,#d97706,#f59e0b)" : "#e5e7eb", color: warnMsg.trim() ? "white" : "#9ca3af", border:"none", padding:"0.6rem 1.4rem", borderRadius:8, cursor: warnMsg.trim() ? "pointer" : "not-allowed", fontWeight:700, fontSize:"0.9rem" }}>
                 {warnLoading ? "Sending..." : "⚠️ Send Warning"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeWarningSupplier && (
+        <div className="warning-popup-overlay" onClick={() => setOpenWarningFor(null)}>
+          <div className="warning-popup-card" onClick={(e) => e.stopPropagation()}>
+            <div className="warning-popup-head">
+              <h3>⚠️ Supplier Warnings</h3>
+              <button type="button" className="warning-popup-close" onClick={() => setOpenWarningFor(null)}>×</button>
+            </div>
+            <p className="warning-popup-subtitle">
+              {activeWarningSupplier.firstName} {activeWarningSupplier.lastName}
+            </p>
+            <div className="warning-popup-list">
+              {activeWarningSupplier.warnings?.map((w, wi) => (
+                <div key={wi} className="warning-menu-item">
+                  <span className="warning-menu-text">{w.message || `Warning ${wi + 1}`}</span>
+                  <button
+                    type="button"
+                    className="warn-tag-remove"
+                    title="Remove warning"
+                    onClick={() => removeWarning(activeWarningSupplier._id, wi)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="warning-popup-actions">
+              <button
+                type="button"
+                className="warning-remove-all-btn"
+                onClick={() => removeAllWarnings(activeWarningSupplier._id, activeWarningSupplier.warnings.length)}
+              >
+                Remove All
               </button>
             </div>
           </div>
