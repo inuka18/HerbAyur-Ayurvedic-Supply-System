@@ -323,3 +323,59 @@
 }
 
 .pd-close-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* ── COD CONFIRMED BADGE ── */
+.pd-cod-confirmed { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+
+/* ── COD ACTION BUTTONS ── */
+.pd-cod-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  border: 1.5px solid #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+  white-space: nowrap;
+}
+
+.pd-cod-action-btn:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(180, 83, 9, 0.18);
+}
+
+.pd-cod-action-btn:active:not(:disabled) { transform: translateY(0); }
+
+.pd-cod-action-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.2);
+}
+
+.pd-cod-action-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pd-cod-confirm-btn {
+  border-color: #16a34a;
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  color: #ffffff;
+}
+
+.pd-cod-confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #166534, #16a34a);
+  border-color: #15803d;
+  box-shadow: 0 5px 12px rgba(21, 128, 61, 0.28);
+}
+
+.pd-cod-confirm-btn:focus-visible { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.28); }

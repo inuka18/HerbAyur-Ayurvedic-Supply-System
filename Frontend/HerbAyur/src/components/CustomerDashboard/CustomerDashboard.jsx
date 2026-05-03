@@ -5,6 +5,7 @@ import CustomerOrders from "../Orders/CustomerOrders";
 import { CustomerReport } from "../Reports/Reports";
 import { CustomerPayment } from "../PaymentDashboard/PaymentDashboard";
 import "../SupplierDashboard/SupplierDashboard.css";
+import "./Payments/PaymentDashboard.css";
 
 const TABS = [
   { id: "offers",   label: "🤝 Supplier Offers" },
