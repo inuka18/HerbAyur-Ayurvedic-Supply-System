@@ -37,10 +37,12 @@ function StatCard({ icon, label, value, color }) {
 export default function AdminDashboard() {
   const location = useLocation();
   const [tab, setTab]               = useState(location.state?.tab || "overview");
+  const [pendingSupplierId, setPendingSupplierId] = useState(location.state?.supplierId || null);
 
   useEffect(() => {
     if (location.state?.tab) setTab(location.state.tab);
-  }, [location.state?.tab]);
+    if (location.state?.supplierId) setPendingSupplierId(location.state.supplierId);
+  }, [location.state?.tab, location.state?.supplierId]);
   const [suppliers, setSuppliers]   = useState([]);
   const [ratings, setRatings]       = useState({});
   const [messages, setMessages]     = useState([]);
@@ -54,10 +56,17 @@ export default function AdminDashboard() {
   const [ordDate, setOrdDate]         = useState("");
   const [supSearch, setSupSearch]     = useState("");
   const [supStatus, setSupStatus]     = useState("All");
+  const [msgSearch, setMsgSearch]     = useState("");
+  const [msgRole, setMsgRole]         = useState("All");
 
-  const [warnModal, setWarnModal]   = useState(null); // { supplierId, name }
+  const [warnModal, setWarnModal]   = useState(null);
   const [warnMsg, setWarnMsg]       = useState("");
   const [warnLoading, setWarnLoading] = useState(false);
+  const [removeModal, setRemoveModal] = useState(null); // { userId, name }
+  const [removeError, setRemoveError] = useState("");
+  const [removeLoading, setRemoveLoading] = useState(false);
+  const [openWarningFor, setOpenWarningFor] = useState(null);
+  const [focusedSupplierId, setFocusedSupplierId] = useState(null);
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -72,6 +81,10 @@ export default function AdminDashboard() {
       setAdminOrders(Array.isArray(oRes) ? oRes : []);
       setRequests(Array.isArray(rRes) ? rRes : []);
       setStats(stRes);
+      fetch(`${API_BASE}/contact`, { headers: { Authorization: `Bearer ${token()}` } })
+        .then(r => r.json())
+        .then((mRes) => setMessages(Array.isArray(mRes) ? mRes : []))
+        .catch(() => setMessages([]));
     } catch {}
     setLoading(false);
   };
@@ -126,12 +139,16 @@ export default function AdminDashboard() {
     fetchSuppliers();
   };
 
-  const removeUser = async (userId, name) => {
-    if (!window.confirm(`Remove "${name}" from the system? This cannot be undone.`)) return;
-    await fetch(`${API_BASE}/auth/remove/${userId}`, {
+  const removeUser = async () => {
+    setRemoveLoading(true); setRemoveError("");
+    const res  = await fetch(`${API_BASE}/auth/remove/${removeModal.userId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token()}` },
     });
+    const data = await res.json();
+    setRemoveLoading(false);
+    if (!res.ok) { setRemoveError(data.message); return; }
+    setRemoveModal(null);
     fetchSuppliers();
   };
 
@@ -156,7 +173,39 @@ export default function AdminDashboard() {
     fetchSuppliers();
   };
 
+  const removeAllWarnings = async (supplierId, warningsCount) => {
+    for (let wi = warningsCount - 1; wi >= 0; wi -= 1) {
+      await fetch(`${API_BASE}/auth/warn/${supplierId}/${wi}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+    }
+    setOpenWarningFor(null);
+    fetchSuppliers();
+  };
+
   const pendingCount = suppliers.filter(s=>s.status==="pending").length;
+  const activeWarningSupplier = suppliers.find(s => s._id === openWarningFor) || null;
+
+  // Auto-open warning popup once suppliers are loaded from notification navigation
+  useEffect(() => {
+    if (pendingSupplierId && suppliers.length > 0) {
+      setSupSearch("");
+      setSupStatus("All");
+      setOpenWarningFor(pendingSupplierId);
+      setFocusedSupplierId(pendingSupplierId);
+      setPendingSupplierId(null);
+    }
+  }, [suppliers, pendingSupplierId]);
+
+  useEffect(() => {
+    if (tab !== "suppliers" || !focusedSupplierId) return;
+    const row = document.getElementById(`supplier-row-${focusedSupplierId}`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = setTimeout(() => setFocusedSupplierId(null), 2500);
+    return () => clearTimeout(timer);
+  }, [tab, focusedSupplierId, suppliers, supSearch, supStatus]);
 
   // Chart data
   const supplierStatusData = stats ? [
@@ -172,6 +221,28 @@ export default function AdminDashboard() {
   const paymentMethodData = ["Card","Bank Transfer","Cash on Delivery"].map(m=>({
     name:m, value: adminOrders.filter(o=>o.paymentMethod===m).length,
   })).filter(d=>d.value>0);
+
+  const requestCompletionData = [
+    { name: "Open", value: requests.filter(r => !r.fullyCompleted).length },
+    { name: "Completed", value: requests.filter(r => r.fullyCompleted).length },
+  ].filter(d => d.value > 0);
+
+  const messageRoleData = [
+    { name: "Customer", value: messages.filter(m => m.role === "customer").length },
+    { name: "Supplier", value: messages.filter(m => m.role === "supplier").length },
+    { name: "Guest", value: messages.filter(m => !m.role || m.role === "guest").length },
+  ].filter(d => d.value > 0);
+
+  const filteredMessages = messages.filter((m) => {
+    const matchRole = msgRole === "All" || (m.role || "guest") === msgRole;
+    const q = msgSearch.toLowerCase().trim();
+    const matchSearch =
+      !q ||
+      (m.name || "").toLowerCase().includes(q) ||
+      (m.email || "").toLowerCase().includes(q) ||
+      (m.message || "").toLowerCase().includes(q);
+    return matchRole && matchSearch;
+  });
 
   return (
     <div className="admin-dashboard">
@@ -254,22 +325,61 @@ export default function AdminDashboard() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Requests vs Orders Line */}
-              <div className="adm-chart-card adm-chart-wide">
+              {/* Request Completion */}
+              <div className="adm-chart-card">
+                <h3>Request Completion</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  {requestCompletionData.length > 0 ? (
+                    <PieChart>
+                      <Pie data={requestCompletionData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name,value})=>`${name}: ${value}`}>
+                        {requestCompletionData.map((_,i)=><Cell key={i} fill={["#f59e0b","#22c55e"][i%2]}/>)}
+                      </Pie>
+                      <Tooltip/><Legend/>
+                    </PieChart>
+                  ) : (
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "0.9rem" }}>
+                      No request data
+                    </div>
+                  )}
+                </ResponsiveContainer>
+              </div>
+
+              {/* Message Roles */}
+              <div className="adm-chart-card">
+                <h3>Message Roles</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  {messageRoleData.length > 0 ? (
+                    <PieChart>
+                      <Pie data={messageRoleData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name,value})=>`${name}: ${value}`}>
+                        {messageRoleData.map((_,i)=><Cell key={i} fill={["#3b82f6","#f59e0b","#8b5cf6"][i%3]}/>)}
+                      </Pie>
+                      <Tooltip/><Legend/>
+                    </PieChart>
+                  ) : (
+                    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "0.9rem" }}>
+                      No message data
+                    </div>
+                  )}
+                </ResponsiveContainer>
+              </div>
+
+              {/* Requests vs Orders */}
+              <div className="adm-chart-card">
                 <h3>Platform Activity</h3>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={[
                     { name:"Requests", value: requests.length },
                     { name:"Orders",   value: adminOrders.length },
                     { name:"Suppliers",value: stats?.totalSuppliers||0 },
                     { name:"Customers",value: stats?.totalCustomers||0 },
+                    { name:"Messages", value: messages.length },
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                     <XAxis dataKey="name" tick={{fontSize:12}}/>
                     <YAxis tick={{fontSize:12}}/>
                     <Tooltip/>
                     <Bar dataKey="value" radius={[6,6,0,0]}>
-                      {["#22c55e","#8b5cf6","#f59e0b","#3b82f6"].map((c,i)=><Cell key={i} fill={c}/>)}
+                      {["#22c55e","#8b5cf6","#f59e0b","#3b82f6","#ef4444"].map((c,i)=><Cell key={i} fill={c}/>)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -320,52 +430,60 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <table className="admin-table">
-                  <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Certification</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {suppliers
-                      .filter(s => {
-                        const matchStatus = supStatus === "All" || s.status === supStatus;
-                        const q = supSearch.toLowerCase();
-                        const matchSearch = !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) || s.companyName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
-                        return matchStatus && matchSearch;
-                      })
-                      .map((s,i)=>(
-                      <tr key={s._id}>
-                        <td>{i+1}</td>
-                        <td>
-                          <div className="supplier-name-cell">
-                            <span className="supplier-name">{s.firstName} {s.lastName}</span>
-                            <div className="supplier-tags">
-                              {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
-                            {s.warnings?.length > 0 && (
-                                s.warnings.map((w, wi) => (
-                                  <span key={wi} className="warn-count-tag">
-                                    <span className="warn-tag-icon">⚠️</span>
-                                    Warning {wi + 1}
+                    <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Address</th><th>Certification</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {suppliers
+                        .filter(s => {
+                          const matchStatus = supStatus === "All" || s.status === supStatus;
+                          const q = supSearch.toLowerCase();
+                          const matchSearch = !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) || s.companyName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+                          return matchStatus && matchSearch;
+                        })
+                        .map((s,i)=>(
+                        <tr
+                          key={s._id}
+                          id={`supplier-row-${s._id}`}
+                          className={focusedSupplierId === s._id ? "supplier-row-focus" : ""}
+                        >
+                          <td>{i+1}</td>
+                          <td>
+                            <div className="supplier-name-cell">
+                              <span className="supplier-name">{s.firstName} {s.lastName}</span>
+                              <div className="supplier-tags">
+                                {s.pendingChanges?.submittedAt && <span className="pending-edit-tag">✏ Edit Pending</span>}
+                                {s.warnings?.length > 0 && (
+                                  <div className="warning-summary-wrap">
                                     <button
-                                      className="warn-tag-remove"
-                                      title={w.message}
-                                      onClick={() => removeWarning(s._id, wi)}
-                                    >×</button>
-                                  </span>
-                                ))
-                              )}
+                                      type="button"
+                                      className="warning-summary-btn"
+                                      title={`${s.warnings.length} warning(s)`}
+                                      onClick={() => setOpenWarningFor(openWarningFor === s._id ? null : s._id)}
+                                    >
+                                      <span className="warning-summary-icon">⚠️</span>
+                                      <span className="warning-summary-count">{s.warnings.length}</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>{s.companyName||"—"}</td>
-                        <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
-                        <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
-                        <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
-                        <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
-                        <td className="action-btns">
-                          {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
-                          <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
-                          <button className="btn-remove" onClick={() => removeUser(s._id, `${s.firstName} ${s.lastName}`)}>🗑 Remove</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                          </td>
+                          <td>{s.companyName||"—"}</td>
+                          <td>{s.email}</td><td>{s.phone}</td><td>{s.address}</td>
+                          <td>{s.certificationUrl?<a href={`http://localhost:5000${s.certificationUrl}`} target="_blank" rel="noreferrer" className="cert-link">📄 View</a>:"—"}</td>
+                          <td><StarDisplay avg={ratings[s._id]?.avg} count={ratings[s._id]?.count}/></td>
+                          <td><span className={`status-badge status-${s.status}`}>{s.status}</span></td>
+                          <td className="action-btns">
+                            {s.status==="pending"&&<><button className="btn-approve" onClick={()=>supplierAction(s._id,"approved")}>✅ Approve</button><button className="btn-reject" onClick={()=>supplierAction(s._id,"rejected")}>❌ Reject</button></>}
+                            {s.status !== "pending" && (
+                              <button className="btn-warn" onClick={() => { setWarnModal({ supplierId: s._id, name: `${s.firstName} ${s.lastName}` }); setWarnMsg(""); }}>⚠️ Warn</button>
+                            )}
+                            {s.status !== "pending" && (
+                              <button className="btn-remove" onClick={() => { setRemoveModal({ userId: s._id, name: `${s.firstName} ${s.lastName}` }); setRemoveError(""); }}>🗑 Remove</button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
                 </table>
               </div>
             </>
@@ -375,21 +493,42 @@ export default function AdminDashboard() {
         ) : tab==="messages" ? (
           messages.length===0 ? <div className="admin-state">No messages yet.</div> : (
             <div className="admin-table-wrap">
+              <div className="adm-filter-bar">
+                <input
+                  className="adm-search"
+                  placeholder="🔍 Search by name, email or message..."
+                  value={msgSearch}
+                  onChange={(e) => setMsgSearch(e.target.value)}
+                />
+                <select className="adm-filter-select" value={msgRole} onChange={(e) => setMsgRole(e.target.value)}>
+                  <option value="All">All Roles</option>
+                  <option value="customer">Customer</option>
+                  <option value="supplier">Supplier</option>
+                  <option value="guest">Guest</option>
+                </select>
+              </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
-                <tbody>
-                  {messages.map((m,i)=>(
-                    <tr key={m._id}>
-                      <td>{i+1}</td><td>{m.name}</td>
-                      <td><span className={`status-badge status-${m.role==="customer"?"approved":m.role==="supplier"?"pending":"rejected"}`} style={{textTransform:"capitalize"}}>
-                        {m.role==="customer"?"👤 Customer":m.role==="supplier"?"🏭 Supplier":"🌐 Guest"}
-                      </span></td>
-                      <td>{m.email}</td>
-                      <td style={{maxWidth:"400px",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.message}</td>
-                      <td style={{whiteSpace:"nowrap"}}>{new Date(m.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                  <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
+                  <tbody>
+                    {filteredMessages.map((m,i)=>(
+                      <tr key={m._id}>
+                        <td>{i+1}</td><td>{m.name}</td>
+                        <td><span className={`status-badge status-${m.role==="customer"?"approved":m.role==="supplier"?"pending":"rejected"}`} style={{textTransform:"capitalize"}}>
+                          {m.role==="customer"?"👤 Customer":m.role==="supplier"?"🏭 Supplier":"🌐 Guest"}
+                        </span></td>
+                        <td>{m.email}</td>
+                        <td style={{maxWidth:"400px",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.message}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{new Date(m.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {filteredMessages.length===0 && (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: "1.2rem" }}>
+                          No messages match the selected filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
               </table>
             </div>
           )
@@ -441,46 +580,65 @@ export default function AdminDashboard() {
                 <input className="adm-filter-select" type="date" value={ordDate} onChange={e => setOrdDate(e.target.value)} title="Filter by date"/>
               </div>
               <table className="admin-table">
-                <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
-                <tbody>
-                  {adminOrders
-                    .filter(o => {
-                      const matchStatus  = ordStatus  === "All" || o.orderStatus   === ordStatus;
-                      const matchPayment = ordPayment === "All" || o.paymentMethod === ordPayment;
-                      const q = ordSearch.toLowerCase();
-                      const matchSearch  = !q ||
-                        `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
-                        (o.supplierId?.companyName || `${o.supplierId?.firstName} ${o.supplierId?.lastName}`).toLowerCase().includes(q) ||
-                        o.listName?.toLowerCase().includes(q) ||
-                        o.receiptNo?.toLowerCase().includes(q);
-                      const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
-                      const matchDate = !ordDate || d === ordDate;
-                      return matchStatus && matchPayment && matchSearch && matchDate;
-                    })
-                    .map((o,i)=>(
-                    <tr key={o._id}>
-                      <td>{i+1}</td>
-                      <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"#6b7280"}}>#{o.receiptNo}</td>
-                      <td><div style={{fontWeight:600}}>{o.customerId?.firstName} {o.customerId?.lastName}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.phone}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.address}</div></td>
-                      <td><div style={{fontWeight:600}}>{o.supplierId?.companyName||`${o.supplierId?.firstName} ${o.supplierId?.lastName}`}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.supplierId?.phone}</div></td>
-                      <td>{o.listName||"—"}</td>
-                      <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
-                      <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
-                      <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
-                      <td><span className={`status-badge ${
-                        o.paymentStatus === "COD Confirmed" ? "status-approved" :
-                        o.paymentStatus === "Paid"          ? "status-approved" :
-                        "status-pending"
-                      }`}>{o.paymentStatus}</span></td>
-                      <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
-                      <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                  <thead><tr><th>#</th><th>Receipt</th><th>Customer</th><th>Supplier</th><th>List</th><th>Items</th><th>Amount</th><th>Payment</th><th>Payment Status</th><th>Order Status</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {adminOrders
+                      .filter(o => {
+                        const matchStatus  = ordStatus  === "All" || o.orderStatus   === ordStatus;
+                        const matchPayment = ordPayment === "All" || o.paymentMethod === ordPayment;
+                        const q = ordSearch.toLowerCase();
+                        const matchSearch  = !q ||
+                          `${o.customerId?.firstName} ${o.customerId?.lastName}`.toLowerCase().includes(q) ||
+                          (o.supplierId?.companyName || `${o.supplierId?.firstName} ${o.supplierId?.lastName}`).toLowerCase().includes(q) ||
+                          o.listName?.toLowerCase().includes(q) ||
+                          o.receiptNo?.toLowerCase().includes(q);
+                        const d = o.createdAt ? o.createdAt.slice(0, 10) : "";
+                        const matchDate = !ordDate || d === ordDate;
+                        return matchStatus && matchPayment && matchSearch && matchDate;
+                      })
+                      .map((o,i)=>(
+                      <tr key={o._id}>
+                        <td>{i+1}</td>
+                        <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"#6b7280"}}>#{o.receiptNo}</td>
+                        <td><div style={{fontWeight:600}}>{o.customerId?.firstName} {o.customerId?.lastName}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.phone}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.customerId?.address}</div></td>
+                        <td><div style={{fontWeight:600}}>{o.supplierId?.companyName||`${o.supplierId?.firstName} ${o.supplierId?.lastName}`}</div><div style={{fontSize:"0.75rem",color:"#6b7280"}}>{o.supplierId?.phone}</div></td>
+                        <td>{o.listName||"—"}</td>
+                        <td style={{fontSize:"0.78rem"}}>{o.items.map((item,j)=><div key={j}>{item.name} × {item.supplyQty} {item.unit}</div>)}</td>
+                        <td style={{fontWeight:700,color:"#15803d"}}>Rs {o.totalAmount.toLocaleString()}</td>
+                        <td><span className="status-badge status-approved">{o.paymentMethod}</span></td>
+                        <td><span className={`status-badge ${
+                          o.paymentStatus === "COD Confirmed" ? "status-approved" :
+                          o.paymentStatus === "Paid"          ? "status-approved" :
+                          "status-pending"
+                        }`}>{o.paymentStatus}</span></td>
+                        <td><span className={`status-badge status-${o.orderStatus==="Delivered"?"approved":o.orderStatus==="Cancelled"?"rejected":"pending"}`}>{o.orderStatus}</span></td>
+                        <td style={{whiteSpace:"nowrap",fontSize:"0.78rem"}}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
               </table>
             </div>
           )
         ) : <AdminReport />
+      )}
+
+      {/* REMOVE MODAL */}
+      {removeModal && (
+        <div className="adm-modal-overlay">
+          <div className="adm-modal-card adm-modal-danger">
+            <div className="adm-modal-icon">🗑️</div>
+            <h3 className="adm-modal-title">Remove Supplier</h3>
+            <p className="adm-modal-body">Are you sure you want to remove <strong>{removeModal.name}</strong> from the system?</p>
+            <p className="adm-modal-warning">⚠ This action cannot be undone.</p>
+            {removeError && <div className="adm-modal-error">{removeError}</div>}
+            <div className="adm-modal-actions">
+              <button className="adm-modal-btn-cancel" onClick={() => { setRemoveModal(null); setRemoveError(""); }} disabled={removeLoading}>Cancel</button>
+              <button className="adm-modal-btn-danger" onClick={removeUser} disabled={removeLoading}>
+                {removeLoading ? "Removing..." : "Yes, Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* WARNING MODAL */}
@@ -501,6 +659,53 @@ export default function AdminDashboard() {
               <button onClick={sendWarning} disabled={warnLoading || !warnMsg.trim()}
                 style={{ background: warnMsg.trim() ? "linear-gradient(135deg,#d97706,#f59e0b)" : "#e5e7eb", color: warnMsg.trim() ? "white" : "#9ca3af", border:"none", padding:"0.6rem 1.4rem", borderRadius:8, cursor: warnMsg.trim() ? "pointer" : "not-allowed", fontWeight:700, fontSize:"0.9rem" }}>
                 {warnLoading ? "Sending..." : "⚠️ Send Warning"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeWarningSupplier && (
+        <div className="warning-popup-overlay" onClick={() => setOpenWarningFor(null)}>
+          <div className="warning-popup-card" onClick={(e) => e.stopPropagation()}>
+            <div className="warning-popup-head">
+              <h3>⚠️ Supplier Warnings</h3>
+              <button type="button" className="warning-popup-close" onClick={() => setOpenWarningFor(null)}>×</button>
+            </div>
+            <p className="warning-popup-subtitle">
+              {activeWarningSupplier.firstName} {activeWarningSupplier.lastName}
+            </p>
+            <div className="warning-popup-list">
+              {activeWarningSupplier.warnings?.map((w, wi) => (
+                <div key={wi} className="warning-menu-item">
+                  <div className="warning-menu-left">
+                    <span className="warning-menu-text">{w.message || `Warning ${wi + 1}`}</span>
+                    <span className="warning-menu-date">{w.issuedAt ? new Date(w.issuedAt).toLocaleDateString() : ""}</span>
+                  </div>
+                  <div className="warning-menu-right">
+                    {w.seenAt
+                      ? <span className="warning-seen-badge">✅ Seen {new Date(w.seenAt).toLocaleDateString()}</span>
+                      : <span className="warning-unseen-badge">👁 Not seen</span>
+                    }
+                    <button
+                      type="button"
+                      className="warn-tag-remove"
+                      title="Remove warning"
+                      onClick={() => removeWarning(activeWarningSupplier._id, wi)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="warning-popup-actions">
+              <button
+                type="button"
+                className="warning-remove-all-btn"
+                onClick={() => removeAllWarnings(activeWarningSupplier._id, activeWarningSupplier.warnings.length)}
+              >
+                Remove All
               </button>
             </div>
           </div>

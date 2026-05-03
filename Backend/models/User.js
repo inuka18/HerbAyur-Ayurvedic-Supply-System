@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
     companyName:      { type: String },
     certificationUrl: { type: String },
     status:      { type: String, enum: ["pending", "approved", "rejected"], default: "approved" },
-    // Supplier pending profile changes awaiting admin approval
     pendingChanges: {
       firstName:        { type: String },
       lastName:         { type: String },
@@ -24,8 +23,9 @@ const userSchema = new mongoose.Schema(
     },
     warnings: [
       {
-        message:   { type: String, required: true },
-        issuedAt:  { type: Date, default: Date.now },
+        message:  { type: String, required: true },
+        issuedAt: { type: Date, default: Date.now },
+        seenAt:   { type: Date, default: null },
       }
     ],
   },

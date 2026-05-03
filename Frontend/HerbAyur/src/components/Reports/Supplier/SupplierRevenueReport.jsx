@@ -35,6 +35,13 @@ export default function SupplierRevenueReport() {
   const confirmed    = filteredOrders.filter(o => o.orderStatus === "Confirmed").length;
   const cardPay      = filteredOrders.filter(o => o.paymentMethod === "Card").length;
   const codPay       = filteredOrders.filter(o => o.paymentMethod === "Cash on Delivery").length;
+  const avgOrderValue = filteredOrders.length ? Math.round(totalRevenue / filteredOrders.length) : 0;
+
+  const formatCurrency = (value) =>
+    `Rs ${Math.round(value || 0).toLocaleString("en-LK")}`;
+
+  const formatCompactCurrency = (value) =>
+    `Rs ${new Intl.NumberFormat("en-LK", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0)}`;
 
   // Revenue by month
   const byMonth = {};
@@ -83,15 +90,21 @@ export default function SupplierRevenueReport() {
       <div ref={ref}>
         <RptHeader title="Revenue & Orders Report" meta={`Supplier: ${user.name} · Status: ${statusFilter} · Payment: ${paymentFilter} · Date: ${getDateRangeLabel(fromDate, toDate)}`}/>
         <RptSection title="📊 Summary">
+          <div className="rpt-revenue-highlight">
+            <div className="rpt-revenue-title">Total Revenue</div>
+            <div className="rpt-revenue-amount">{formatCurrency(totalRevenue)}</div>
+            <div className="rpt-revenue-note">
+              {`${formatCompactCurrency(totalRevenue)} from ${filteredOrders.length} order${filteredOrders.length === 1 ? "" : "s"}`}
+            </div>
+          </div>
           <RptStats stats={[
             { label: "Total Orders",    value: filteredOrders.length },
-            { label: "Total Revenue",   value: `Rs ${totalRevenue.toLocaleString()}` },
             { label: "Delivered",       value: delivered },
             { label: "Processing",      value: processing },
             { label: "Confirmed",       value: confirmed },
             { label: "Card Payments",   value: cardPay },
             { label: "COD Payments",    value: codPay },
-            { label: "Avg Order Value", value: filteredOrders.length ? `Rs ${Math.round(totalRevenue / filteredOrders.length).toLocaleString()}` : "—" },
+            { label: "Avg Order Value", value: filteredOrders.length ? formatCurrency(avgOrderValue) : "—" },
           ]}/>
         </RptSection>
         {Object.keys(byMonth).length > 0 && (
@@ -100,7 +113,7 @@ export default function SupplierRevenueReport() {
               <thead><tr><th>Month</th><th>Revenue</th></tr></thead>
               <tbody>
                 {Object.entries(byMonth).map(([m, rev]) => (
-                  <tr key={m}><td>{m}</td><td>Rs {rev.toLocaleString()}</td></tr>
+                  <tr key={m}><td>{m}</td><td>{formatCurrency(rev)}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -116,7 +129,7 @@ export default function SupplierRevenueReport() {
                   <td>{o.customerId?.firstName} {o.customerId?.lastName}</td>
                   <td>{o.listName || "—"}</td>
                   <td>{o.items.map(it => `${it.name} ×${it.supplyQty}${it.unit}`).join(", ")}</td>
-                  <td>Rs {o.totalAmount.toLocaleString()}</td>
+                  <td>{formatCurrency(o.totalAmount)}</td>
                   <td>{o.paymentMethod === "Cash on Delivery" ? "COD" : o.paymentMethod}</td>
                   <td><span className={`badge ${badge(o.orderStatus)}`}>{o.orderStatus}</span></td>
                   <td>{new Date(o.createdAt).toLocaleDateString()}</td>

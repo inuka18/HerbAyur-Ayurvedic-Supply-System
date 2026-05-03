@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Printer, CreditCard, Truck, CheckCircle2, Clock, TrendingUp, ShoppingBag, Calendar, Filter } from "lucide-react";
 import API_BASE from "../../api";
-import "./PaymentDashboard.css";
 
 function ReceiptPrint({ order, onClose }) {
   const ref = useRef();
@@ -239,6 +238,7 @@ export function SupplierPayment() {
   const [search, setSearch]   = useState("");
   const [filterMethod, setFilterMethod] = useState("All");
   const [filterDate, setFilterDate]     = useState("");
+  const [confirmingOrderIds, setConfirmingOrderIds] = useState({});
   const token = localStorage.getItem("token");
 
   const fetchOrders = () => {
@@ -252,11 +252,26 @@ export function SupplierPayment() {
   useEffect(() => { fetchOrders(); }, []);
 
   const confirmCodPayment = async (orderId) => {
-    await fetch(`${API_BASE}/orders/${orderId}/confirm-cod-payment`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchOrders();
+    if (confirmingOrderIds[orderId]) return;
+    setConfirmingOrderIds(prev => ({ ...prev, [orderId]: true }));
+    setOrders(prev => prev.map(o => (
+      o._id === orderId ? { ...o, paymentStatus: "COD Confirmed" } : o
+    )));
+    try {
+      const res = await fetch(`${API_BASE}/orders/${orderId}/confirm-cod-payment`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to confirm COD payment");
+    } catch {
+      fetchOrders();
+    } finally {
+      setConfirmingOrderIds(prev => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    }
   };
 
   const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
@@ -397,8 +412,12 @@ export function SupplierPayment() {
                         {o.paymentStatus}
                       </span>
                       {o.paymentMethod === "Cash on Delivery" && o.paymentStatus === "Paid" && (
-                        <button className="pd-cod-action-btn pd-cod-confirm-btn" onClick={() => confirmCodPayment(o._id)}>
-                          ✅ Confirm Payment
+                        <button
+                          className="pd-cod-action-btn pd-cod-confirm-btn"
+                          onClick={() => confirmCodPayment(o._id)}
+                          disabled={Boolean(confirmingOrderIds[o._id])}
+                        >
+                          {confirmingOrderIds[o._id] ? "⏳ Confirming..." : "✅ Confirm Payment"}
                         </button>
                       )}
                     </div>

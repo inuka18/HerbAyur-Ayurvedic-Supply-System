@@ -679,6 +679,24 @@ transform:translateY(-1px);
 .sm-stat:nth-child(8)::before { background: #65a30d; }
 .sm-stat:nth-child(8) .sm-stat-num { color: #4d7c0f; }
 
+.sm-stat.sm-stat-card-rejected {
+  border-color: #fca5a5;
+  background: linear-gradient(160deg, #fff5f5, #fee2e2);
+}
+
+.sm-stat.sm-stat-card-rejected::before { background: #dc2626; }
+
+.sm-stat.sm-stat-card-rejected .sm-stat-num { color: #b91c1c; }
+
+.sm-stat.sm-stat-card-total-spent {
+  border-color: #c4b5fd;
+  background: linear-gradient(160deg, #f5f3ff, #ede9fe);
+}
+
+.sm-stat.sm-stat-card-total-spent::before { background: #7c3aed; }
+
+.sm-stat.sm-stat-card-total-spent .sm-stat-num { color: #6d28d9; }
+
 .sm-stat-num {
   font-size: 2rem !important;
   font-weight: 900;

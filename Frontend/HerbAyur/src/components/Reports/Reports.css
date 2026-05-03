@@ -213,6 +213,37 @@
   margin-top: 4px;
 }
 
+.rpt-revenue-highlight {
+  border: 1px solid #a7f3d0;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.rpt-revenue-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #065f46;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rpt-revenue-amount {
+  margin-top: 3px;
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #064e3b;
+  line-height: 1.1;
+}
+
+.rpt-revenue-note {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #047857;
+  font-weight: 600;
+}
+
 .rpt-table-wrap { overflow-x: auto; }
 
 .rpt-table {

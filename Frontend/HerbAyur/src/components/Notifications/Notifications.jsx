@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Bell } from "lucide-react";
+import { Bell, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API_BASE from "../../api";
 import "./Notifications.css";
@@ -60,6 +60,11 @@ function getNavTarget(notification) {
       }
       return null;
 
+    case "warning_seen":
+      return role === "admin"
+        ? { path: "/admin", tab: "suppliers", supplierId: notification.relatedId }
+        : null;
+
     case "new_customer":
       return role === "admin" ? { path: "/admin", tab: "overview" } : null;
 
@@ -105,28 +110,59 @@ function getNavTarget(notification) {
 function Notifications() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
+  const [warnings, setWarnings] = useState([]);
   const [open, setOpen] = useState(false);
+  const [warningOpen, setWarningOpen] = useState(false);
   const ref = useRef();
 
   const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isSupplier = user.role === "supplier";
 
   const fetchNotifications = async () => {
     if (!token) return;
     try {
-      const res  = await fetch(`${API_BASE}/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+      const res  = await fetch(`${API_BASE}/notifications`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setNotifications(Array.isArray(data) ? data : []);
     } catch {}
   };
 
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
-  }, [token]);
+  const fetchWarnings = async () => {
+    if (!token || !isSupplier) return;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setWarnings(Array.isArray(data?.warnings) ? data.warnings : []);
+    } catch {}
+  };
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    fetchNotifications();
+    fetchWarnings();
+    const interval = setInterval(fetchNotifications, 15000);
+    const warningInterval = setInterval(fetchWarnings, 15000);
+    const visibilityHandler = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+        fetchWarnings();
+      }
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    return () => {
+      clearInterval(interval);
+      clearInterval(warningInterval);
+      document.removeEventListener("visibilitychange", visibilityHandler);
+    };
+  }, [token, isSupplier]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setWarningOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -149,7 +185,7 @@ function Notifications() {
     if (!n.read) await markRead(n._id);
     const target = getNavTarget(n);
     setOpen(false);
-    if (target) navigate(target.path, { state: { tab: target.tab } });
+    if (target) navigate(target.path, { state: { tab: target.tab, supplierId: target.supplierId || null } });
   };
 
   const unread = notifications.filter(n => !n.read).length;
@@ -158,10 +194,61 @@ function Notifications() {
 
   return (
     <div className="notif-wrapper" ref={ref}>
+      {isSupplier && warnings.length > 0 && (
+        <button className="notif-bell notif-bell-warn" onClick={() => { setWarningOpen(o => !o); setOpen(false); }}>
+          <AlertTriangle size={20}/>
+          <span className="notif-badge" style={{ background:"#ea580c" }}>{warnings.length}</span>
+        </button>
+      )}
+
       <button className="notif-bell" onClick={() => setOpen(o => !o)}>
         <Bell size={20}/>
         {unread > 0 && <span className="notif-badge">{unread}</span>}
       </button>
+
+      {warningOpen && isSupplier && warnings.length > 0 && (
+        <div className="warning-list-dropdown">
+          <div className="warning-list-header">
+            <span>⚠️ Warnings ({warnings.length})</span>
+          </div>
+          <div className="warning-list-body">
+            {warnings.map((w, i) => (
+              <div key={`${w.issuedAt || i}-${i}`} className="warning-list-item">
+                <div className="warning-list-msg">{w.message}</div>
+                <div className="warning-list-footer">
+                  <span className="warning-list-date">{w.issuedAt ? new Date(w.issuedAt).toLocaleDateString() : "—"}</span>
+                  {w.seenAt ? (
+                    <span className="warning-seen-tag">✅ Confirmed</span>
+                  ) : (
+                    <button
+                      className="warning-confirm-btn"
+                      onClick={() => {
+                        // Optimistic update — instant UI
+                        const now = new Date().toISOString();
+                        setWarnings(prev => prev.map((w2, j) => j === i ? { ...w2, seenAt: now } : w2));
+                        fetch(`${API_BASE}/auth/my-warning/${i}/seen`, {
+                          method: "PATCH",
+                          headers: { Authorization: `Bearer ${token}` },
+                        }).then(r => r.json()).then(data => {
+                          if (data.warnings) {
+                            setWarnings(data.warnings);
+                            fetchNotifications();
+                          }
+                        }).catch(() => {
+                          // revert on error
+                          setWarnings(prev => prev.map((w2, j) => j === i ? { ...w2, seenAt: null } : w2));
+                        });
+                      }}
+                    >
+                      ☑ I have seen this
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="notif-dropdown">
