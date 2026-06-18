@@ -6,12 +6,17 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import Notifications from "../Notifications/Notifications";
+import { useLanguage } from "../../context/LanguageContext";
 
 function Navbar() {
   const navigate = useNavigate();
   const [hoverIndex, setHoverIndex] = useState(0);
   const [dropOpen, setDropOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const dropRef = useRef(null);
+  const langRef = useRef(null);
+  const { language, languageOptions, setLanguage, t } = useLanguage();
+  const selectedLanguage = languageOptions.find((option) => option.code === language);
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -33,10 +38,50 @@ function Navbar() {
       if (dropRef.current && !dropRef.current.contains(e.target)) {
         setDropOpen(false);
       }
+      if (langRef.current && !langRef.current.contains(e.target)) {
+        setLangOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleLanguageChange = (nextLanguage) => {
+    setLanguage(nextLanguage);
+    setLangOpen(false);
+  };
+
+  const languageDropdown = (
+    <div className="pro-language-wrap" ref={langRef} data-i18n-skip>
+      <button
+        className="pro-language-btn"
+        type="button"
+        aria-label={t("language")}
+        onClick={() => setLangOpen((open) => !open)}
+      >
+        <span className={`pro-language-mark lang-${language}`}>
+          {selectedLanguage?.shortLabel}
+        </span>
+        <ChevronDown size={11} className={`pro-chevron ${langOpen ? "open" : ""}`}/>
+      </button>
+
+      {langOpen && (
+        <div className="pro-language-menu">
+          <div className="pro-language-title">{t("language")}</div>
+          {languageOptions.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              className={`pro-language-option ${option.code === language ? "active" : ""}`}
+              onClick={() => handleLanguageChange(option.code)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -54,9 +99,9 @@ function Navbar() {
         {/* NAV LINKS (GREEN BACKGROUND AREA) */}
         <nav className="pro-nav-links pro-nav-highlight">
           {[
-            { to:"/", label:"Home", icon:<Home size={16}/>, idx:0 },
-            { to:"/About", label:"About", icon:<Info size={16}/>, idx:1 },
-            { to:"/Contact", label:"Contact", icon:<Phone size={16}/>, idx:2 },
+            { to:"/", label:t("navHome"), icon:<Home size={16}/>, idx:0 },
+            { to:"/About", label:t("navAbout"), icon:<Info size={16}/>, idx:1 },
+            { to:"/Contact", label:t("navContact"), icon:<Phone size={16}/>, idx:2 },
           ].map(link => (
             <NavLink
               key={link.to}
@@ -91,7 +136,7 @@ function Navbar() {
 
               {user.role === "customer" && (
                 <NavLink to="/RequestForm" className="pro-btn pro-btn-accent">
-                  <Send size={16}/> Post Requirement
+                  <Send size={16}/> {t("postRequirement")}
                 </NavLink>
               )}
 
@@ -119,34 +164,38 @@ function Navbar() {
                     <div className="pro-dropdown-divider"/>
 
                     <button className="pro-drop-item" onClick={() => navigate("/profile")}>
-                      <User size={15}/> My Profile
+                      <User size={15}/> {t("myProfile")}
                     </button>
 
                     <button className="pro-drop-item" onClick={() => navigate(dashPath)}>
-                      <LayoutDashboard size={15}/> Dashboard
+                      <LayoutDashboard size={15}/> {t("dashboard")}
                     </button>
 
                     <div className="pro-dropdown-divider"/>
 
                     <button className="pro-drop-item pro-drop-logout" onClick={handleLogout}>
-                      <LogOut size={15}/> Logout
+                      <LogOut size={15}/> {t("logout")}
                     </button>
                   </div>
                 )}
               </div>
+
+              {languageDropdown}
             </>
           ) : (
             <>
+              {languageDropdown}
+
               <NavLink to="/Login" className="pro-btn pro-btn-outline">
-                <LogIn size={16}/> Login
+                <LogIn size={16}/> {t("login")}
               </NavLink>
 
               <NavLink to="/Signup" className="pro-btn pro-btn-primary">
-                <UserPlus size={16}/> Sign Up
+                <UserPlus size={16}/> {t("signup")}
               </NavLink>
 
               <NavLink to="/RequestForm" className="pro-btn pro-btn-accent">
-                <Send size={16}/> Post Requirement
+                <Send size={16}/> {t("postRequirement")}
               </NavLink>
             </>
           )}
